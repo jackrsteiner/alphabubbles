@@ -124,26 +124,18 @@
     100% { opacity: 1; transform: scale(1)   translateY(0);   }
   }
 
-  /* The ACTIVE gap: its guide letter brightens to the glow gold and pulses
-     in sync with the target key, and a soft halo glows over the cloud.
+  /* The ACTIVE gap: a pulsing gold OUTLINE traces the letter-shaped hole,
+     in sync with the target key. Outline only - the gap itself stays
+     empty-looking so it can't be mistaken for an already-found letter.
      Deliberate redundancy: the child matches glowing shape to glowing key. */
   .gap-guide { opacity: 0.5; }
-  .gap-guide.gap-active {
-    fill: var(--key-glow);
-    opacity: 1;
+  .gap-outline {
+    pointer-events: none;
     animation: gapPulse 1.1s ease-in-out infinite;
   }
   @keyframes gapPulse {
-    0%, 100% { opacity: 0.65; }
+    0%, 100% { opacity: 0.55; }
     50%      { opacity: 1; }
-  }
-  .gap-halo {
-    pointer-events: none;
-    animation: haloPulse 1.1s ease-in-out infinite;
-  }
-  @keyframes haloPulse {
-    0%, 100% { opacity: 0.3; }
-    50%      { opacity: 0.7; }
   }
 
   /* ===================================================================
@@ -400,7 +392,7 @@
     .key.target { animation: none; }
     .bubble { transition: none !important; }
     .bubble .wobble { animation: none; }
-    .gap-guide.gap-active, .gap-halo { animation: none; }
+    .gap-outline { animation: none; }
     #picture svg, #picture svg * { animation: none !important; }
   }
 </style>
@@ -457,7 +449,8 @@ const CONFIG = {
   nextLevelDelayMs: 1900,  // pause after the word is spoken before the next one
   spellStartMs: 650,       // beat after completion before sounding the word out
   spellLetterMs: 520,      // per-letter spacing while sounding out ("Mmm-oh-mmm")
-  spellWordGapMs: 480,     // tiny breath before the whole word ("Mom!")
+  spellWordGapMs: 650,     // breath before the whole word ("Mom!") - long
+                           // enough that it never clips the last phoneme
   tts: {
     rate: 0.8,             // slightly slow, clearer for a toddler
     pitch: 1.15,           // slightly high, friendlier
@@ -627,34 +620,59 @@ const Audio = (() => {
   }
 
   /**
-   * Speak text via TTS. Two Chrome quirks are worked around here (the
-   * letter sound used to be silent much of the time because of them):
-   *   - cancel() followed by speak() in the same tick silently drops the
-   *     new utterance, so after a cancel the speak happens on the next tick;
-   *   - the synthesizer can wedge in a paused state after inactivity, so
-   *     resume() is called before every speak.
-   * `interrupt: false` queues instead of cancelling - used while sounding
-   * out a completed word so the letters don't cut each other off.
+   * Speak text via TTS: one speaker, newest sound wins. Chromium's
+   * speechSynthesis is fragile in several ways that all end in silence:
+   *   - an utterance spoken in the same task as cancel() is silently
+   *     dropped, and "one tick later" is often still too soon;
+   *   - the engine can wedge in a paused state and swallow every queued
+   *     utterance from then on;
+   *   - a pending utterance with no live JS reference can be GC'd.
+   * So: always cancel, hold a strong reference, resume() and speak on a
+   * short delay, and a watchdog re-speaks if the engine never starts.
+   * Sequencing (the sounded-out word) is driven by timers in Game, so
+   * newest-wins is safe: each phoneme simply supersedes the previous.
    */
-  function speak(text, { rate = CONFIG.tts.rate, pitch = CONFIG.tts.pitch,
-                         interrupt = true } = {}) {
+  let current = null;      // strong ref so Chrome can't GC the utterance
+  let watchdog = 0;
+
+  function speak(text, { rate = CONFIG.tts.rate, pitch = CONFIG.tts.pitch } = {}) {
     const synth = window.speechSynthesis;
     if (!synth) return;
+    clearTimeout(watchdog);
+    synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.rate = rate;
     u.pitch = pitch;
     u.lang = "en-US";
     if (voice) u.voice = voice;
-    const go = () => { synth.resume(); synth.speak(u); };
-    if (interrupt && (synth.speaking || synth.pending)) {
-      synth.cancel();
-      setTimeout(go, 0);
-    } else {
-      go();
-    }
+    u.onstart = () => clearTimeout(watchdog);
+    u.onend = u.onerror = () => { if (current === u) current = null; };
+    current = u;
+
+    const attempt = (retries) => {
+      if (current !== u) return;         // superseded by a newer sound
+      synth.resume();                    // un-wedge a paused engine
+      synth.speak(u);
+      watchdog = setTimeout(() => {
+        if (current !== u) return;
+        if (!synth.speaking && !synth.pending && retries > 0) {
+          synth.cancel();
+          attempt(retries - 1);
+        }
+      }, 500);
+    };
+    setTimeout(() => attempt(2), 50);    // never speak in cancel()'s task
   }
 
-  function play(letter, opts) {
+  /* Some Chromium builds pause the synthesizer after inactivity; a paused
+     engine silently swallows every utterance. Nudge it back periodically. */
+  setInterval(() => {
+    if (window.speechSynthesis && window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
+  }, 3000);
+
+  function play(letter) {
     // Try a recorded file the first time; remember the outcome.
     if (!cache.has(letter)) {
       const el = new window.Audio(CONFIG.soundsPath + letter.toLowerCase() + ".mp3");
@@ -666,16 +684,16 @@ const Audio = (() => {
       el.currentTime = 0;
       el.play().catch(() => {
         cache.set(letter, null);
-        speak(PHONETIC[letter] || letter, opts);
+        speak(PHONETIC[letter] || letter);
       });
     } else {
-      speak(PHONETIC[letter] || letter, opts);   // no file -> phonetic hint
+      speak(PHONETIC[letter] || letter);   // no file -> phonetic hint
     }
   }
 
-  /** Say a whole word (word-completion celebration). Queues, never cancels. */
+  /** Say a whole word (word-completion celebration). */
   function sayWord(word) {
-    speak(word, { rate: 0.85, pitch: 1.1, interrupt: false });
+    speak(word, { rate: 0.85, pitch: 1.1 });
   }
 
   return { unlock, play, sayWord, squish, jingle };
@@ -723,9 +741,8 @@ const Cloud = (() => {
   const SVGNS = "http://www.w3.org/2000/svg";
   const svg = document.getElementById("cloud-svg");
   let layout = null;     // current word's LetterLayout result
-  let guideEls = [];     // guide <text> per slot (for the active highlight)
   let filledEls = [];    // filled <text> per slot (for re-landing pops)
-  let haloEl = null;     // soft glow over the active gap
+  let outlineEl = null;  // pulsing gold outline traced around the active gap
 
   const el = (name, attrs = {}) => {
     const node = document.createElementNS(SVGNS, name);
@@ -767,7 +784,6 @@ const Cloud = (() => {
   /** Render the word: cloud with letter holes, faint guides showing through. */
   function setWord(word) {
     layout = LetterLayout.forWord(word);
-    guideEls = [];
     filledEls = [];
     const { positions, width, height } = layout;
 
@@ -792,13 +808,6 @@ const Cloud = (() => {
       mask.appendChild(t);
     }
     defs.appendChild(mask);
-
-    // Soft radial gold for the active-gap halo.
-    const halo = el("radialGradient", { id: "halo-grad" });
-    halo.appendChild(el("stop", { offset: "0",   "stop-color": "#FFD166", "stop-opacity": "0.9" }));
-    halo.appendChild(el("stop", { offset: "0.7", "stop-color": "#FFD166", "stop-opacity": "0.35" }));
-    halo.appendChild(el("stop", { offset: "1",   "stop-color": "#FFD166", "stop-opacity": "0" }));
-    defs.appendChild(halo);
     svg.appendChild(defs);
 
     // Faint guide letters sit BEHIND the cloud, dimly visible through holes.
@@ -809,7 +818,6 @@ const Cloud = (() => {
       }));
       t.textContent = p.letter;
       guides.appendChild(t);
-      guideEls.push(t);
     }
     svg.appendChild(guides);
 
@@ -819,12 +827,23 @@ const Cloud = (() => {
     cloud.setAttribute("filter", "drop-shadow(0 6px 6px rgba(80,110,140,0.18))");
     svg.appendChild(cloud);
 
-    // The active-gap halo glows ON TOP of the cloud, around the hole.
-    haloEl = el("circle", {
-      class: "gap-halo", fill: "url(#halo-grad)", r: 0,
-    });
-    haloEl.style.display = "none";
-    svg.appendChild(haloEl);
+    // The active-gap outline traces the hole's letter shape ON TOP of the
+    // cloud: a soft wide glow stroke under a crisp one. Outline only, so
+    // the gap still reads as empty (a filled look would suggest the letter
+    // was already found). Repositioned per slot by setActive().
+    outlineEl = el("g", { class: "gap-outline" });
+    const glowStroke = el("text", Object.assign(glyphAttrs(positions[0]), {
+      fill: "none", stroke: "var(--key-glow)", "stroke-width": 13,
+      opacity: 0.35, "stroke-linejoin": "round",
+    }));
+    const crispStroke = el("text", Object.assign(glyphAttrs(positions[0]), {
+      fill: "none", stroke: "var(--key-glow)", "stroke-width": 5,
+      "stroke-linejoin": "round",
+    }));
+    outlineEl.appendChild(glowStroke);
+    outlineEl.appendChild(crispStroke);
+    outlineEl.style.display = "none";
+    svg.appendChild(outlineEl);
 
     // A group that filled letters get appended into (drawn on top of the cloud).
     svg.appendChild(el("g", { id: "filled-letters" }));
@@ -832,17 +851,18 @@ const Cloud = (() => {
 
   /** Highlight slot `i` as the one being typed (null clears the highlight). */
   function setActive(i) {
-    for (const g of guideEls) g.classList.remove("gap-active");
+    if (!outlineEl) return;
     if (i == null || !layout) {
-      if (haloEl) haloEl.style.display = "none";
+      outlineEl.style.display = "none";
       return;
     }
     const p = layout.positions[i];
-    guideEls[i].classList.add("gap-active");
-    haloEl.setAttribute("cx", p.x);
-    haloEl.setAttribute("cy", p.y);
-    haloEl.setAttribute("r", p.size * 0.72);
-    haloEl.style.display = "";
+    for (const stroke of outlineEl.children) {
+      stroke.setAttribute("x", p.x);
+      stroke.setAttribute("y", p.y);
+      stroke.textContent = p.letter;
+    }
+    outlineEl.style.display = "";
   }
 
   /** Fill slot `i` with its bright, solid letter (the balloon has arrived). */
@@ -1525,7 +1545,7 @@ const Game = (() => {
 
     const letters = [...state.word];
     letters.forEach((letter, i) => {
-      setTimeout(() => Audio.play(letter, { interrupt: false }),
+      setTimeout(() => Audio.play(letter),
         CONFIG.spellStartMs + i * CONFIG.spellLetterMs);
     });
     const wordAt = CONFIG.spellStartMs + letters.length * CONFIG.spellLetterMs

@@ -20,11 +20,20 @@ were fixed. Issue numbers refer to the GitHub tracker.
 3. No `lang`/voice was set on the utterance; some browsers stay silent until
    a voice is explicitly chosen after `voiceschanged`.
 
-**Fix:** cancel only when something is actually speaking/pending and issue
-the new `speak()` on the next tick; call `resume()` before every `speak()`;
-set `lang = "en-US"` and pick a local English voice once voices load.
-Word-completion speech uses `interrupt: false` so the sounded-out letters
-queue instead of cancelling each other.
+**First fix (insufficient on real Chrome):** cancel only when something was
+speaking/pending and speak on the next tick; `resume()` before every speak;
+pin `lang = "en-US"` and a local English voice. In practice Chrome still
+dropped utterances — "one tick after cancel()" is often still too soon, a
+wedged-paused engine swallows the whole queue (so the `interrupt: false`
+celebration speech never played), and pending utterances can even be GC'd.
+
+**Final fix — one speaker, newest-wins:** `Audio.speak` now always
+`cancel()`s, holds a strong reference to the current utterance, calls
+`resume()` and `speak()` after a short (50 ms) delay, and arms a watchdog
+that re-speaks up to twice if the engine never reports
+`speaking`/`pending`. A 3-second heartbeat resumes a wedged-paused engine.
+The engine's own queue is never relied on: the sounded-out word is
+sequenced by `Game` timers, each phoneme superseding the previous.
 
 ## 2. Cloud clipped flat on top (#8)
 

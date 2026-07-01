@@ -37,11 +37,13 @@ is the source of truth for *implementation*.
    Each gap faintly shows its target letter as a guide. A **picture of the
    word** (hand-drawn SVG) stands on the grass below, hinting at what is
    being spelled.
-2. The **active slot** (next letter to fill) glows — its guide letter
-   brightens to the glow gold and pulses, with a soft halo over the gap —
-   and the **matching key** on the wireframe keyboard glows in sync. Both
-   the goal gap *and* the glowing key are shown — deliberate redundancy
-   that helps a young child match on-screen shape to key position.
+2. The **active slot** (next letter to fill) glows — a pulsing gold
+   **outline traces the letter-shaped hole** (outline only: the gap itself
+   stays empty-looking, so it can't be mistaken for a letter that was
+   already found) — and the **matching key** on the wireframe keyboard
+   glows in sync. Both the goal gap *and* the glowing key are shown —
+   deliberate redundancy that helps a young child match on-screen shape
+   to key position.
 3. Child finds and presses the glowing key. A **letter-shaped bubble** (the
    letter's own glyph, drawn glossy and translucent) rises from the key and
    **nests into its matching gap, squishing into place and becoming a solid
@@ -140,13 +142,16 @@ is the source of truth for *implementation*.
   arpeggio with a soft closing chord. Same no-assets rationale as the squish.
 - **Word-completion speech:** the word is sounded out **letter by letter,
   slowly, with hardly any pause** (via `Audio.play`, so recorded clips are
-  used when present), then spoken **whole**. These utterances queue
-  (`interrupt: false`) instead of cancelling each other.
-- **TTS reliability:** Chromium silently drops an utterance spoken in the
-  same tick as `cancel()`, and can wedge its synthesizer in a paused state.
-  `Audio.speak` therefore cancels only when needed (speaking on the next
-  tick after a cancel), calls `resume()` before every speak, and pins
-  `lang`/a local English voice. See BUGS.md #1.
+  used when present), then spoken **whole**. The sequence is timer-driven;
+  each utterance supersedes the previous (newest-wins).
+- **TTS reliability:** Chromium silently drops utterances spoken too soon
+  after `cancel()`, can wedge its synthesizer in a paused state (silently
+  swallowing everything queued), and can GC a pending utterance. `Audio.speak`
+  is therefore *one speaker, newest-wins*: it always cancels, holds a strong
+  reference to the current utterance, resumes + speaks on a short delay, and
+  a watchdog re-speaks if the engine never starts; a heartbeat un-pauses a
+  wedged engine. Sequencing (the sounded-out word) is done with timers in
+  `Game`, never the engine's queue. See BUGS.md #1.
 
 ## 7. Bubbles (the floating letters)
 
