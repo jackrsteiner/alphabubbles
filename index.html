@@ -457,7 +457,8 @@ const CONFIG = {
   nextLevelDelayMs: 1900,  // pause after the word is spoken before the next one
   spellStartMs: 650,       // beat after completion before sounding the word out
   spellLetterMs: 520,      // per-letter spacing while sounding out ("Mmm-oh-mmm")
-  spellWordGapMs: 480,     // tiny breath before the whole word ("Mom!")
+  spellWordGapMs: 650,     // breath before the whole word ("Mom!") - long
+                           // enough that it never clips the last phoneme
   tts: {
     rate: 0.8,             // slightly slow, clearer for a toddler
     pitch: 1.15,           // slightly high, friendlier
@@ -627,34 +628,59 @@ const Audio = (() => {
   }
 
   /**
-   * Speak text via TTS. Two Chrome quirks are worked around here (the
-   * letter sound used to be silent much of the time because of them):
-   *   - cancel() followed by speak() in the same tick silently drops the
-   *     new utterance, so after a cancel the speak happens on the next tick;
-   *   - the synthesizer can wedge in a paused state after inactivity, so
-   *     resume() is called before every speak.
-   * `interrupt: false` queues instead of cancelling - used while sounding
-   * out a completed word so the letters don't cut each other off.
+   * Speak text via TTS: one speaker, newest sound wins. Chromium's
+   * speechSynthesis is fragile in several ways that all end in silence:
+   *   - an utterance spoken in the same task as cancel() is silently
+   *     dropped, and "one tick later" is often still too soon;
+   *   - the engine can wedge in a paused state and swallow every queued
+   *     utterance from then on;
+   *   - a pending utterance with no live JS reference can be GC'd.
+   * So: always cancel, hold a strong reference, resume() and speak on a
+   * short delay, and a watchdog re-speaks if the engine never starts.
+   * Sequencing (the sounded-out word) is driven by timers in Game, so
+   * newest-wins is safe: each phoneme simply supersedes the previous.
    */
-  function speak(text, { rate = CONFIG.tts.rate, pitch = CONFIG.tts.pitch,
-                         interrupt = true } = {}) {
+  let current = null;      // strong ref so Chrome can't GC the utterance
+  let watchdog = 0;
+
+  function speak(text, { rate = CONFIG.tts.rate, pitch = CONFIG.tts.pitch } = {}) {
     const synth = window.speechSynthesis;
     if (!synth) return;
+    clearTimeout(watchdog);
+    synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.rate = rate;
     u.pitch = pitch;
     u.lang = "en-US";
     if (voice) u.voice = voice;
-    const go = () => { synth.resume(); synth.speak(u); };
-    if (interrupt && (synth.speaking || synth.pending)) {
-      synth.cancel();
-      setTimeout(go, 0);
-    } else {
-      go();
-    }
+    u.onstart = () => clearTimeout(watchdog);
+    u.onend = u.onerror = () => { if (current === u) current = null; };
+    current = u;
+
+    const attempt = (retries) => {
+      if (current !== u) return;         // superseded by a newer sound
+      synth.resume();                    // un-wedge a paused engine
+      synth.speak(u);
+      watchdog = setTimeout(() => {
+        if (current !== u) return;
+        if (!synth.speaking && !synth.pending && retries > 0) {
+          synth.cancel();
+          attempt(retries - 1);
+        }
+      }, 500);
+    };
+    setTimeout(() => attempt(2), 50);    // never speak in cancel()'s task
   }
 
-  function play(letter, opts) {
+  /* Some Chromium builds pause the synthesizer after inactivity; a paused
+     engine silently swallows every utterance. Nudge it back periodically. */
+  setInterval(() => {
+    if (window.speechSynthesis && window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
+  }, 3000);
+
+  function play(letter) {
     // Try a recorded file the first time; remember the outcome.
     if (!cache.has(letter)) {
       const el = new window.Audio(CONFIG.soundsPath + letter.toLowerCase() + ".mp3");
@@ -666,16 +692,16 @@ const Audio = (() => {
       el.currentTime = 0;
       el.play().catch(() => {
         cache.set(letter, null);
-        speak(PHONETIC[letter] || letter, opts);
+        speak(PHONETIC[letter] || letter);
       });
     } else {
-      speak(PHONETIC[letter] || letter, opts);   // no file -> phonetic hint
+      speak(PHONETIC[letter] || letter);   // no file -> phonetic hint
     }
   }
 
-  /** Say a whole word (word-completion celebration). Queues, never cancels. */
+  /** Say a whole word (word-completion celebration). */
   function sayWord(word) {
-    speak(word, { rate: 0.85, pitch: 1.1, interrupt: false });
+    speak(word, { rate: 0.85, pitch: 1.1 });
   }
 
   return { unlock, play, sayWord, squish, jingle };
@@ -1525,7 +1551,7 @@ const Game = (() => {
 
     const letters = [...state.word];
     letters.forEach((letter, i) => {
-      setTimeout(() => Audio.play(letter, { interrupt: false }),
+      setTimeout(() => Audio.play(letter),
         CONFIG.spellStartMs + i * CONFIG.spellLetterMs);
     });
     const wordAt = CONFIG.spellStartMs + letters.length * CONFIG.spellLetterMs
