@@ -34,20 +34,29 @@ is the source of truth for *implementation*.
 ## 3. Core gameplay loop
 
 1. A word is shown as **letter-shaped gaps in a single cloud** at the top.
-   Each gap faintly shows its target letter as a guide.
-2. The **active slot** (next letter to fill) glows; the **matching key** on
-   the wireframe keyboard glows too. Both the goal balloon/gap *and* the
-   glowing key are shown — deliberate redundancy that helps a young child
-   match on-screen shape to key position.
+   Each gap faintly shows its target letter as a guide. A **picture of the
+   word** (hand-drawn SVG) stands on the grass below, hinting at what is
+   being spelled.
+2. The **active slot** (next letter to fill) glows — its guide letter
+   brightens to the glow gold and pulses, with a soft halo over the gap —
+   and the **matching key** on the wireframe keyboard glows in sync. Both
+   the goal gap *and* the glowing key are shown — deliberate redundancy
+   that helps a young child match on-screen shape to key position.
 3. Child finds and presses the glowing key. A **letter-shaped bubble** (the
    letter's own glyph, drawn glossy and translucent) rises from the key and
    **nests into its matching gap, squishing into place and becoming a solid
    bright letter.** The phonetic sound plays on press; a soft **squish sound**
    plays on landing.
 4. The glow advances to the next slot. Repeat until the word is complete.
-5. On completion: one **bigger celebration** (banner + the whole word spoken).
-   Reward is concentrated at word completion, not scattered per letter.
-6. Next level begins.
+5. On completion: one **bigger celebration**, concentrated at word
+   completion rather than scattered per letter —
+   - the banner pops and a **success jingle** plays (synthesized arpeggio);
+   - the **picture comes alive**: big smile, a wink, and a word-appropriate
+     move (tail wag, quacking beak, spinning sun rays, turning wheels...);
+   - the word is **sounded out slowly, letter by letter with hardly any
+     pause** ("Mmm" "oh" "mmm"), then spoken **whole** ("Mom!").
+6. Next level begins (the delay adapts to the word's length so the
+   sounding-out is never cut off).
 
 ### Matching model
 - **Press picks the destination; balloon flies to it; it lands.** Because
@@ -57,8 +66,14 @@ is the source of truth for *implementation*.
   satisfying cause-and-effect of a real landing without the ambiguity.)
 
 ### Wrong / extra keys
-- Any non-target key still **plays its sound** and floats a balloon that
-  **drifts up and off-screen** — no landing, **no pop**, no reward, no penalty.
+- Any non-target *learned* key still **plays its sound** and floats a balloon
+  that **drifts up and off-screen** — no landing, **no pop**, no reward, no
+  penalty.
+- **Exception — the letter that just worked:** re-pressing the immediately
+  preceding letter of the current word sends its bubble back to the (already
+  filled) gap, where it lands and re-pops the solid letter. A friendly bonus
+  rep for the very common toddler move of re-pressing the key that just
+  succeeded; the active slot does not move.
 - Rationale: popping wrong letters would over-reward mistakes. The asymmetry
   (correct = purposeful landing; incorrect = drifts away to nothing) is the
   intended reinforcement.
@@ -67,19 +82,27 @@ is the source of truth for *implementation*.
 
 ## 4. The keyboard
 
-- **Full physical QWERTY layout is always present as a wireframe** (every key
-  in its true position), but **only "learned" letters show their letter and
-  are pressable.** This teaches the real spatial map without 26+ symbols of
-  clutter.
-- **Blank (not-yet-learned) keys are inert** — pressing them does nothing.
-  Keeps the world small and the target unmissable early on.
+- **The full physical ANSI layout is always present as a wireframe** — the
+  number row, Tab/Caps/Shift, Backspace, Enter, punctuation, and the bottom
+  Ctrl/Alt/space row, each at its true position and relative width — but
+  **only "learned" letters show their letter and are pressable.** This
+  teaches the real spatial map without 26+ symbols of clutter.
+- **Non-letter keys are decorative:** they carry a faint label (⌫, enter ⏎,
+  shift...) so the diagram matches the child's real keyboard, but pressing
+  them only nudges the keycap — no sound, no bubbles. Same for punctuation
+  and digits.
+- **Blank (not-yet-learned) keys are inert** — pressing them does nothing,
+  on-screen *and* on the physical keyboard. Keeps the world small and the
+  target unmissable early on.
+- **Shortcut combos (Ctrl/Cmd/Alt + key) are left to the browser** so the
+  parent can still reload, zoom, etc.
 - **Persistence-lit:** once a letter is learned it stays lit forever. Derived
   from the level list in code, so it can never drift out of sync.
 - **Difficulty curve is emergent:** as more letters light up, the "find the
   glowing key" hunt naturally gets harder. No separate difficulty system.
-- The **target key glows/pulses** as a hint. Kept always-on for this age; the
-  growing number of lit keys is what raises challenge, not removing the hint.
-- A decorative, inert **space bar** completes the familiar keyboard shape.
+- The **target key glows/pulses** as a hint, in sync with the glowing gap in
+  the cloud. Kept always-on for this age; the growing number of lit keys is
+  what raises challenge, not removing the hint.
 
 ## 5. The cloud & word structure
 
@@ -113,12 +136,28 @@ is the source of truth for *implementation*.
 - **Squish sound** (bubble landing) is **synthesized** via the Web Audio API
   (a short downward pitch bloop through a lowpass filter) — no audio file
   needed. The Web Audio context is created/resumed on the "Tap to start" tap.
+- **Success jingle** (word completion) is also synthesized: a rising C-major
+  arpeggio with a soft closing chord. Same no-assets rationale as the squish.
+- **Word-completion speech:** the word is sounded out **letter by letter,
+  slowly, with hardly any pause** (via `Audio.play`, so recorded clips are
+  used when present), then spoken **whole**. These utterances queue
+  (`interrupt: false`) instead of cancelling each other.
+- **TTS reliability:** Chromium silently drops an utterance spoken in the
+  same tick as `cancel()`, and can wedge its synthesizer in a paused state.
+  `Audio.speak` therefore cancels only when needed (speaking on the next
+  tick after a cancel), calls `resume()` before every speak, and pins
+  `lang`/a local English voice. See BUGS.md #1.
 
 ## 7. Bubbles (the floating letters)
 
 - The floating thing is a **letter-SHAPED bubble** — the letter's own glyph,
   rendered glossy and translucent — **not a balloon with a letter printed on
   it.** This makes the game cohere: the bubble *is* the letter.
+- **Soap-bubble rendering:** a radial gloss (bright off-centre hotspot
+  fading to a saturated, slightly darkened rim), a specular highlight plus a
+  small sparkle, a soft outer glow under a crisp white rim stroke, and a
+  gentle **wobble** while floating (squash oscillation, removed on landing
+  in favour of the squish). `prefers-reduced-motion` disables the wobble.
 - Because the bubble uses the **same glyph and size as the cloud gap** (sized
   via `Cloud.scale()`), it **fits the hole exactly** when it lands — alignment
   is guaranteed by construction, not by hand-tuning.
@@ -135,6 +174,25 @@ is the source of truth for *implementation*.
   in the clutter.
 - Naming note: the game is **Alphabubbles**; the code module is still named
   `Balloons` internally (functional legacy name) — cosmetic only.
+
+## 7b. Word pictures (the character on the grass)
+
+- **Every word shows a picture while it is being spelled** — a friendly,
+  hand-drawn **inline SVG** standing on the meadow to the left of the
+  keyboard, so it lives in the physical world of the game (Mom stands on
+  the grass; the sun hangs in its panel; the duck waddles on the lawn).
+- **Inline SVG, not emoji or image files:** keeps the game a single
+  offline file, and — the real reason — the faces are **rigged**: eyes,
+  mouths and moving parts carry classes the CSS can animate.
+- **Idle:** a gentle bob and a small smile. Calm, not distracting.
+- **On completion (the success reward):** a happy bounce, the small smile
+  swaps for a **big open smile**, one eye **winks**, and each character does
+  its own thing — the cat/dog/fox/pig wag tails, the duck **quacks** its
+  beak, the sun spins its rays, bus/van wheels spin, the runner's legs
+  pump, the hat tips, the sleeper in the bed wakes up and smiles.
+- All 19 curriculum words have art. A future word without art simply shows
+  no picture (nothing breaks), and `prefers-reduced-motion` keeps the
+  expression swap but stills the motion.
 
 ## 8. Curriculum (level order)
 
@@ -203,8 +261,8 @@ right after the two most emotionally loaded words (MOM, DAD).
 - **Single source of truth for glyph placement:** `LetterLayout` — the gap
   (mask), the faint guide, and the filled letter all read the same position and
   size, guaranteeing perfect alignment by construction.
-- **Modules:** `Audio`, `LetterLayout`, `Cloud`, `Keyboard`, `Balloons`,
-  `Game` (state machine). Each is small and single-purpose.
+- **Modules:** `Audio`, `LetterLayout`, `Cloud`, `Keyboard`, `Pictures`,
+  `Balloons`, `Game` (state machine). Each is small and single-purpose.
 - **Known trade-off:** the display font loads from Google Fonts; fully offline
   it falls back to a system rounded font (game still works, letters look
   slightly different). Embedding the font would bloat the single file.
@@ -214,7 +272,10 @@ right after the two most emotionally loaded words (MOM, DAD).
 - Real recorded phoneme audio (parent's voice) dropped into `sounds/`.
 - Multi-word phrases (one cloud per word).
 - Optional zero-new-letter reinforcement levels.
-- Animal words (DOG, PIG, COW, FOX) could tie in pictures / animal sounds.
+- Animal sounds on completion (the pictures exist now — a "moo" clip could
+  play alongside COW's celebration).
 - Tuning `balloonRiseMs` after watching the child — is the rise rewarding or
   too slow for his patience?
 - Fade the target-key hint as the child improves (deliberately deferred).
+
+See **BUGS.md** for the log of defects found and fixed.

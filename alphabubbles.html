@@ -54,7 +54,7 @@
     --font-display: "Fredoka", "Trebuchet MS", "Segoe UI Rounded", system-ui, sans-serif;
 
     /* Layout */
-    --keyboard-height: 34vh;
+    --keyboard-height: 33vh;
     --key-gap: 0.6vmin;
   }
 
@@ -113,13 +113,143 @@
   .filled-letter {
     font-family: var(--font-display);
     font-weight: 700;
-    /* Pop-in when a bubble lands and becomes the solid letter. */
+    /* Pop-in when a bubble lands and becomes the solid letter. fill-box
+       keeps the scale centred on the glyph, not the SVG origin. */
     animation: settle 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    transform-box: fill-box;
+    transform-origin: center;
   }
   @keyframes settle {
     0%   { opacity: 0; transform: scale(0.4) translateY(8px); }
     100% { opacity: 1; transform: scale(1)   translateY(0);   }
   }
+
+  /* The ACTIVE gap: its guide letter brightens to the glow gold and pulses
+     in sync with the target key, and a soft halo glows over the cloud.
+     Deliberate redundancy: the child matches glowing shape to glowing key. */
+  .gap-guide { opacity: 0.5; }
+  .gap-guide.gap-active {
+    fill: var(--key-glow);
+    opacity: 1;
+    animation: gapPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes gapPulse {
+    0%, 100% { opacity: 0.65; }
+    50%      { opacity: 1; }
+  }
+  .gap-halo {
+    pointer-events: none;
+    animation: haloPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes haloPulse {
+    0%, 100% { opacity: 0.3; }
+    50%      { opacity: 0.7; }
+  }
+
+  /* ===================================================================
+     WORD PICTURE  (hand-drawn SVG character standing on the grass)
+     Shown while the word is being spelled; comes alive on completion.
+     =================================================================== */
+  #picture {
+    position: absolute;
+    left: 4vw;
+    bottom: calc(var(--keyboard-height) + 1.5vh);
+    width: clamp(90px, 21vmin, 220px);
+    z-index: 2;
+    pointer-events: none;
+  }
+  #picture svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    animation: picIdle 3.2s ease-in-out infinite;   /* gentle idle bob */
+    transform-origin: 50% 100%;
+  }
+  #picture.celebrate svg {
+    animation: picCheer 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) 3;
+  }
+  @keyframes picIdle {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-1.2vh); }
+  }
+  @keyframes picCheer {
+    0%, 100% { transform: scale(1, 1); }
+    35%      { transform: scale(1.08, 0.9); }
+    70%      { transform: scale(0.94, 1.06) translateY(-1.6vh); }
+  }
+
+  /* Expression swap: parts marked .on-idle show before completion, parts
+     marked .on-cheer (the big smile, opened eyes...) appear on celebrate. */
+  #picture .on-cheer { opacity: 0; }
+  #picture.celebrate .on-cheer { opacity: 1; }
+  #picture.celebrate .on-idle  { opacity: 0; }
+
+  /* Per-part success moves. Every part uses transform-box: fill-box so it
+     animates around its own anchor, not the whole SVG's origin. */
+  #picture.celebrate .wink {
+    animation: wink 1.2s ease-in-out 0.15s 2;
+    transform-box: fill-box; transform-origin: center;
+  }
+  @keyframes wink {
+    0%, 55%, 100% { transform: scaleY(1); }
+    20%, 40%      { transform: scaleY(0.12); }
+  }
+  #picture.celebrate .waggle {
+    animation: waggle 0.4s ease-in-out 6 alternate;
+    transform-box: fill-box; transform-origin: left bottom;
+  }
+  @keyframes waggle {
+    from { transform: rotate(-8deg); }
+    to   { transform: rotate(10deg); }
+  }
+  #picture.celebrate .spin {
+    animation: spinAround 1.4s ease-in-out 1;
+    transform-box: fill-box; transform-origin: center;
+  }
+  @keyframes spinAround { to { transform: rotate(360deg); } }
+  #picture.celebrate .tip {
+    animation: hatTip 0.8s ease-in-out 2;
+    transform-box: fill-box; transform-origin: center bottom;
+  }
+  @keyframes hatTip {
+    0%, 100% { transform: rotate(0) translateY(0); }
+    40%      { transform: rotate(-14deg) translateY(-10px); }
+  }
+  #picture.celebrate .nod {
+    animation: nod 0.7s ease-in-out 2;
+    transform-box: fill-box; transform-origin: center bottom;
+  }
+  @keyframes nod {
+    0%, 100% { transform: rotate(0); }
+    30%      { transform: rotate(9deg); }
+    70%      { transform: rotate(-9deg); }
+  }
+  #picture.celebrate .beak-top {
+    animation: quackTop 0.3s ease-in-out 6 alternate;
+    transform-box: fill-box; transform-origin: left center;
+  }
+  @keyframes quackTop { to { transform: rotate(-22deg); } }
+  #picture.celebrate .kick {
+    animation: kick 0.6s ease-in-out 2;
+    transform-box: fill-box; transform-origin: top center;
+  }
+  @keyframes kick {
+    0%, 100% { transform: rotate(0); }
+    30%      { transform: rotate(-24deg); }
+    60%      { transform: rotate(10deg); }
+  }
+  #picture.celebrate .leg-a,
+  #picture.celebrate .arm-b {
+    animation: kickA 0.3s ease-in-out 6 alternate;
+    transform-box: fill-box; transform-origin: top center;
+  }
+  #picture.celebrate .leg-b,
+  #picture.celebrate .arm-a {
+    animation: kickB 0.3s ease-in-out 6 alternate;
+    transform-box: fill-box; transform-origin: top center;
+  }
+  @keyframes kickA { from { transform: rotate(-14deg); } to { transform: rotate(16deg); } }
+  @keyframes kickB { from { transform: rotate(16deg); } to { transform: rotate(-14deg); } }
 
   /* ===================================================================
      BUBBLES  (letter-SHAPED bubbles that rise from the keyboard)
@@ -135,6 +265,13 @@
   }
   .bubble svg { display: block; overflow: visible; }
 
+  /* Soap-bubble wobble while floating: a soft squash oscillation. */
+  .bubble .wobble { animation: wobble 0.9s ease-in-out infinite; transform-origin: 50% 50%; }
+  @keyframes wobble {
+    0%, 100% { transform: scale(1.04, 0.96); }
+    50%      { transform: scale(0.96, 1.04); }
+  }
+
   /* Squish-on-landing: a quick squash-and-settle applied to the inner svg
      so it composes cleanly with the outer element's travel transform. */
   .bubble .squish { animation: squish 0.26s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
@@ -146,11 +283,11 @@
   }
 
   /* ===================================================================
-     KEYBOARD  (wireframe; only "learned" letters are shown)
+     KEYBOARD  (full ANSI wireframe; only "learned" letters are lit)
      =================================================================== */
   #keyboard {
     position: absolute;
-    left: 0; right: 0; bottom: 2vh;
+    left: 0; right: 0; bottom: 1.5vh;
     height: var(--keyboard-height);
     z-index: 4;
     display: flex;
@@ -163,21 +300,31 @@
   .key-row { display: flex; gap: var(--key-gap); justify-content: center; width: 100%; }
 
   .key {
-    flex: 1 1 0;
-    max-width: 8vmin;
-    aspect-ratio: 1 / 1.15;
-    border-radius: 1.4vmin;
+    --w: 1;                           /* width in key units (Backspace = 2...) */
+    flex: var(--w) 1 0;
+    max-width: calc(var(--w) * 7vmin);
+    height: 5.6vmin;
+    border-radius: 1.2vmin;
     background: var(--key-blank);
     border: 0.3vmin solid var(--key-edge);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 4.2vmin;
+    font-size: 3.2vmin;
     font-weight: 600;
     color: transparent;               /* blank keys show no letter */
     transition: transform 0.08s ease, background 0.2s ease, box-shadow 0.2s ease;
   }
-  .key.space { flex: 6 1 0; max-width: 40vmin; aspect-ratio: auto; height: 6vmin; }
+
+  /* Non-letter keys (Backspace, Enter, Shift, punctuation...): decorative
+     wireframe with a faint label so the map matches the real keyboard.
+     They are inert: no sound, no bubbles - just a nudge when pressed. */
+  .key.deco {
+    color: rgba(55, 72, 95, 0.4);
+    font-size: 1.7vmin;
+    letter-spacing: 0.04em;
+  }
+  .key.pressed { transform: translateY(2px) scale(0.97); background: rgba(255,255,255,0.4); }
 
   /* A "learned" letter: visible and pressable. */
   .key.lit {
@@ -246,10 +393,15 @@
   #start-button:active { transform: translateY(0.4vh); box-shadow: 0 0.4vh 0 var(--cloud-shadow); }
   #start-button:focus-visible { outline: 0.5vmin solid var(--candy-4); outline-offset: 0.5vmin; }
 
-  /* Respect users who prefer less motion: keep the game, calm the drift. */
+  /* Respect users who prefer less motion: keep the game, calm the drift.
+     Expression swaps (the big smile) still happen - they are opacity
+     toggles, not animations. */
   @media (prefers-reduced-motion: reduce) {
     .key.target { animation: none; }
     .bubble { transition: none !important; }
+    .bubble .wobble { animation: none; }
+    .gap-guide.gap-active, .gap-halo { animation: none; }
+    #picture svg, #picture svg * { animation: none !important; }
   }
 </style>
 </head>
@@ -259,6 +411,7 @@
     <div id="cloud-layer"><svg id="cloud-svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
     <div id="banner"></div>
     <div id="meadow"></div>
+    <div id="picture"></div>
     <div id="keyboard"></div>
 
     <div id="start-gate">
@@ -286,8 +439,9 @@
      litLettersUpTo- derives which keys are "learned" from the word list
      Audio         - recorded-file playback with automatic TTS fallback
      LetterLayout  - one source of truth for glyph position (gap = guide = fill)
-     Cloud         - builds the word cloud + fills letters
-     Keyboard      - wireframe keys, lit letters, target glow, tap support
+     Cloud         - builds the word cloud + fills letters + active-gap glow
+     Keyboard      - full wireframe, lit letters, target glow, tap support
+     Pictures      - hand-drawn SVG per word; animates as the success reward
      Balloons      - spawning, the live cap, rise + drift animation
      Game          - the state machine that ties it together
    ===================================================================== */
@@ -300,8 +454,10 @@ const CONFIG = {
   balloonCap: 14,          // max balloons alive at once (sound always plays)
   balloonRiseMs: 1400,     // how long a correct balloon takes to reach its gap
   strayRiseMs: 3200,       // how long a wrong/other balloon drifts up and off
-  bannerMs: 1500,          // celebration banner duration on word complete
-  nextLevelDelayMs: 1900,  // pause after a word before the next one
+  nextLevelDelayMs: 1900,  // pause after the word is spoken before the next one
+  spellStartMs: 650,       // beat after completion before sounding the word out
+  spellLetterMs: 520,      // per-letter spacing while sounding out ("Mmm-oh-mmm")
+  spellWordGapMs: 480,     // tiny breath before the whole word ("Mom!")
   tts: {
     rate: 0.8,             // slightly slow, clearer for a toddler
     pitch: 1.15,           // slightly high, friendlier
@@ -328,11 +484,21 @@ const PHONETIC = {
   V:"vvv", W:"wuh", X:"ks",  Y:"yuh", Z:"zzz",
 };
 
-/* Physical keyboard layout used to build the wireframe. */
+/* Physical keyboard layout used to build the wireframe.
+   Entry: [id, label, width-in-key-units]. A single A-Z id is a playable
+   letter key; everything else is decorative wireframe (faint label, inert)
+   so the on-screen map matches the child's real keyboard. */
 const KEY_ROWS = [
-  ["Q","W","E","R","T","Y","U","I","O","P"],
-  ["A","S","D","F","G","H","J","K","L"],
-  ["Z","X","C","V","B","N","M"],
+  [["`"], ["1"], ["2"], ["3"], ["4"], ["5"], ["6"], ["7"], ["8"], ["9"], ["0"],
+   ["-"], ["="], ["Backspace", "⌫", 2]],
+  [["Tab", "tab", 1.5], ["Q"], ["W"], ["E"], ["R"], ["T"], ["Y"], ["U"], ["I"],
+   ["O"], ["P"], ["["], ["]"], ["\\", "\\", 1.5]],
+  [["CapsLock", "caps", 1.75], ["A"], ["S"], ["D"], ["F"], ["G"], ["H"], ["J"],
+   ["K"], ["L"], [";"], ["'"], ["Enter", "enter ⏎", 2.25]],
+  [["Shift", "shift", 2.25], ["Z"], ["X"], ["C"], ["V"], ["B"], ["N"], ["M"],
+   [","], ["."], ["/"], ["Shift", "shift", 2.75]],
+  [["Control", "ctrl", 1.5], ["Alt", "alt", 1.25], [" ", "", 9.5],
+   ["Alt", "alt", 1.25], ["Control", "ctrl", 1.5]],
 ];
 
 /* Candy colours, cycled by slot index so each word is cheerfully multi-colour. */
@@ -372,6 +538,22 @@ const Audio = (() => {
   const cache = new Map();      // letter -> HTMLAudioElement | null (null = no file)
   let unlocked = false;
   let ctx = null;               // Web Audio context for synthesized effects
+  let voice = null;             // preferred English TTS voice, once voices load
+
+  /* Some browsers report no voices until "voiceschanged" fires; without an
+     explicit voice/lang a few of them stay silent. Prefer a local English
+     voice (faster, works offline). */
+  function pickVoice() {
+    const voices = window.speechSynthesis.getVoices();
+    voice =
+      voices.find((v) => v.lang && v.lang.startsWith("en") && v.localService) ||
+      voices.find((v) => v.lang && v.lang.startsWith("en")) ||
+      null;
+  }
+  if (window.speechSynthesis) {
+    pickVoice();
+    window.speechSynthesis.addEventListener("voiceschanged", pickVoice);
+  }
 
   /** Called once on the first user tap to satisfy autoplay policies. */
   function unlock() {
@@ -383,7 +565,7 @@ const Audio = (() => {
       u.volume = 0;
       window.speechSynthesis.speak(u);
     }
-    // Create (and resume) the audio context for the squish effect.
+    // Create (and resume) the audio context for the synthesized effects.
     const AC = window.AudioContext || window.webkitAudioContext;
     if (AC) {
       ctx = new AC();
@@ -419,16 +601,60 @@ const Audio = (() => {
     osc.start(t); osc.stop(t + 0.24);
   }
 
-  function speak(letter) {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(PHONETIC[letter] || letter);
-    u.rate = CONFIG.tts.rate;
-    u.pitch = CONFIG.tts.pitch;
-    window.speechSynthesis.speak(u);
+  /**
+   * A short, cheerful success jingle: a rising major arpeggio with a soft
+   * closing chord. Synthesized like the squish, so no files are needed.
+   */
+  function jingle() {
+    if (!ctx) return;
+    const t0 = ctx.currentTime + 0.02;
+    const note = (freq, at, dur, vol = 0.16, type = "triangle") => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t0 + at);
+      gain.gain.setValueAtTime(0.0001, t0 + at);
+      gain.gain.exponentialRampToValueAtTime(vol, t0 + at + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + at + dur);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(t0 + at); osc.stop(t0 + at + dur + 0.05);
+    };
+    note(523.25, 0.00, 0.30);          // C5
+    note(659.25, 0.12, 0.30);          // E5
+    note(783.99, 0.24, 0.30);          // G5
+    note(1046.50, 0.36, 0.45, 0.2);    // C6
+    [523.25, 659.25, 783.99].forEach((f) => note(f, 0.6, 0.9, 0.08, "sine"));
   }
 
-  function play(letter) {
+  /**
+   * Speak text via TTS. Two Chrome quirks are worked around here (the
+   * letter sound used to be silent much of the time because of them):
+   *   - cancel() followed by speak() in the same tick silently drops the
+   *     new utterance, so after a cancel the speak happens on the next tick;
+   *   - the synthesizer can wedge in a paused state after inactivity, so
+   *     resume() is called before every speak.
+   * `interrupt: false` queues instead of cancelling - used while sounding
+   * out a completed word so the letters don't cut each other off.
+   */
+  function speak(text, { rate = CONFIG.tts.rate, pitch = CONFIG.tts.pitch,
+                         interrupt = true } = {}) {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = rate;
+    u.pitch = pitch;
+    u.lang = "en-US";
+    if (voice) u.voice = voice;
+    const go = () => { synth.resume(); synth.speak(u); };
+    if (interrupt && (synth.speaking || synth.pending)) {
+      synth.cancel();
+      setTimeout(go, 0);
+    } else {
+      go();
+    }
+  }
+
+  function play(letter, opts) {
     // Try a recorded file the first time; remember the outcome.
     if (!cache.has(letter)) {
       const el = new window.Audio(CONFIG.soundsPath + letter.toLowerCase() + ".mp3");
@@ -438,13 +664,21 @@ const Audio = (() => {
     const el = cache.get(letter);
     if (el) {
       el.currentTime = 0;
-      el.play().catch(() => { cache.set(letter, null); speak(letter); });
+      el.play().catch(() => {
+        cache.set(letter, null);
+        speak(PHONETIC[letter] || letter, opts);
+      });
     } else {
-      speak(letter);   // no file available -> speak the phonetic hint
+      speak(PHONETIC[letter] || letter, opts);   // no file -> phonetic hint
     }
   }
 
-  return { unlock, play, squish };
+  /** Say a whole word (word-completion celebration). Queues, never cancels. */
+  function sayWord(word) {
+    speak(word, { rate: 0.85, pitch: 1.1, interrupt: false });
+  }
+
+  return { unlock, play, sayWord, squish, jingle };
 })();
 
 
@@ -483,18 +717,30 @@ const LetterLayout = (() => {
 
 /* ---------------------------------------------------------------------
    Cloud  - renders the current word as letter-shaped gaps in one cloud,
-   and fills a slot when a bubble arrives.
+   fills a slot when a bubble arrives, and highlights the active gap.
    --------------------------------------------------------------------- */
 const Cloud = (() => {
   const SVGNS = "http://www.w3.org/2000/svg";
   const svg = document.getElementById("cloud-svg");
-  let layout = null;   // current word's LetterLayout result
+  let layout = null;     // current word's LetterLayout result
+  let guideEls = [];     // guide <text> per slot (for the active highlight)
+  let filledEls = [];    // filled <text> per slot (for re-landing pops)
+  let haloEl = null;     // soft glow over the active gap
 
   const el = (name, attrs = {}) => {
     const node = document.createElementNS(SVGNS, name);
     for (const k in attrs) node.setAttribute(k, attrs[k]);
     return node;
   };
+
+  /* Shared glyph attributes: the gap, the guide and the filled letter must
+     be pixel-identical. font-family goes through `style` because var() is
+     not valid inside an SVG presentation attribute. */
+  const glyphAttrs = (p) => ({
+    x: p.x, y: p.y, "font-size": p.size, "font-weight": 700,
+    "text-anchor": "middle", "dominant-baseline": "middle",
+    style: "font-family: var(--font-display)",
+  });
 
   /** Build a soft, blobby cloud path spanning the given box. */
   function cloudShape(width, height) {
@@ -521,6 +767,8 @@ const Cloud = (() => {
   /** Render the word: cloud with letter holes, faint guides showing through. */
   function setWord(word) {
     layout = LetterLayout.forWord(word);
+    guideEls = [];
+    filledEls = [];
     const { positions, width, height } = layout;
 
     svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
@@ -528,31 +776,40 @@ const Cloud = (() => {
 
     const maskId = "cloud-holes";
     const defs = el("defs");
-    const mask = el("mask", { id: maskId });
-    // White = keep cloud; black letters = punch holes.
-    mask.appendChild(el("rect", { x: 0, y: 0, width, height, fill: "white" }));
+    // The mask's white "keep" rect extends far beyond the viewBox: the
+    // cloud's top lumps poke above y=0, and anything outside the rect
+    // would be masked away (this was the "clipped flat cloud" bug).
+    const mask = el("mask", {
+      id: maskId, maskUnits: "userSpaceOnUse",
+      x: -width, y: -height, width: width * 3, height: height * 3,
+    });
+    mask.appendChild(el("rect", {
+      x: -width, y: -height, width: width * 3, height: height * 3, fill: "white",
+    }));
     for (const p of positions) {
-      const t = el("text", {
-        x: p.x, y: p.y, "font-size": p.size, "font-family": "var(--font-display)",
-        "font-weight": 700, "text-anchor": "middle", "dominant-baseline": "middle",
-        fill: "black",
-      });
+      const t = el("text", Object.assign(glyphAttrs(p), { fill: "black" }));
       t.textContent = p.letter;
       mask.appendChild(t);
     }
     defs.appendChild(mask);
+
+    // Soft radial gold for the active-gap halo.
+    const halo = el("radialGradient", { id: "halo-grad" });
+    halo.appendChild(el("stop", { offset: "0",   "stop-color": "#FFD166", "stop-opacity": "0.9" }));
+    halo.appendChild(el("stop", { offset: "0.7", "stop-color": "#FFD166", "stop-opacity": "0.35" }));
+    halo.appendChild(el("stop", { offset: "1",   "stop-color": "#FFD166", "stop-opacity": "0" }));
+    defs.appendChild(halo);
     svg.appendChild(defs);
 
     // Faint guide letters sit BEHIND the cloud, dimly visible through holes.
-    const guides = el("g", { opacity: 0.5 });
+    const guides = el("g");
     for (const p of positions) {
-      const t = el("text", {
-        x: p.x, y: p.y, "font-size": p.size, "font-family": "var(--font-display)",
-        "font-weight": 700, "text-anchor": "middle", "dominant-baseline": "middle",
-        fill: "var(--cloud-guide)",
-      });
+      const t = el("text", Object.assign(glyphAttrs(p), {
+        fill: "var(--cloud-guide)", class: "gap-guide",
+      }));
       t.textContent = p.letter;
       guides.appendChild(t);
+      guideEls.push(t);
     }
     svg.appendChild(guides);
 
@@ -562,20 +819,51 @@ const Cloud = (() => {
     cloud.setAttribute("filter", "drop-shadow(0 6px 6px rgba(80,110,140,0.18))");
     svg.appendChild(cloud);
 
+    // The active-gap halo glows ON TOP of the cloud, around the hole.
+    haloEl = el("circle", {
+      class: "gap-halo", fill: "url(#halo-grad)", r: 0,
+    });
+    haloEl.style.display = "none";
+    svg.appendChild(haloEl);
+
     // A group that filled letters get appended into (drawn on top of the cloud).
     svg.appendChild(el("g", { id: "filled-letters" }));
+  }
+
+  /** Highlight slot `i` as the one being typed (null clears the highlight). */
+  function setActive(i) {
+    for (const g of guideEls) g.classList.remove("gap-active");
+    if (i == null || !layout) {
+      if (haloEl) haloEl.style.display = "none";
+      return;
+    }
+    const p = layout.positions[i];
+    guideEls[i].classList.add("gap-active");
+    haloEl.setAttribute("cx", p.x);
+    haloEl.setAttribute("cy", p.y);
+    haloEl.setAttribute("r", p.size * 0.72);
+    haloEl.style.display = "";
   }
 
   /** Fill slot `i` with its bright, solid letter (the balloon has arrived). */
   function fill(i) {
     const p = layout.positions[i];
     const group = svg.querySelector("#filled-letters");
-    const t = el("text", {
-      x: p.x, y: p.y, "font-size": p.size, "font-family": "var(--font-display)",
-      "font-weight": 700, "text-anchor": "middle", "dominant-baseline": "middle",
+    const t = el("text", Object.assign(glyphAttrs(p), {
       fill: candyFor(i), class: "filled-letter",
-    });
+    }));
     t.textContent = p.letter;
+    group.appendChild(t);
+    filledEls[i] = t;
+  }
+
+  /** Re-pop an already-filled letter (a bubble landed in its gap again). */
+  function refill(i) {
+    const t = filledEls[i];
+    if (!t || !t.parentNode) return;
+    const group = t.parentNode;
+    group.removeChild(t);
+    void svg.getBoundingClientRect();   // reflow so the settle animation restarts
     group.appendChild(t);
   }
 
@@ -594,54 +882,84 @@ const Cloud = (() => {
     return ctm ? ctm.a : 1;
   }
 
-  return { setWord, fill, slotScreenPos, scale };
+  return { setWord, setActive, fill, refill, slotScreenPos, scale };
 })();
 
 
 /* ---------------------------------------------------------------------
-   Keyboard  - the wireframe keyboard. Only "learned" letters are lit and
-   pressable; blank keys are inert. One key can be highlighted as target.
+   Keyboard  - the full wireframe keyboard. Only "learned" letters are lit
+   and pressable; everything else (blank letters, Backspace, Enter, Shift,
+   punctuation...) is inert wireframe that completes the physical map.
    Physical keypresses and on-screen taps go through the same handler.
    --------------------------------------------------------------------- */
 const Keyboard = (() => {
   const root = document.getElementById("keyboard");
   const keyEls = new Map();     // letter -> element
+  const decoEls = new Map();    // physical event.key -> [elements] (Shift x2...)
+  const litSet = new Set();
   let onPress = () => {};       // set by Game
+
+  const isLetter = (id) => id.length === 1 && id >= "A" && id <= "Z";
 
   function build() {
     for (const row of KEY_ROWS) {
       const rowEl = document.createElement("div");
       rowEl.className = "key-row";
-      for (const letter of row) {
+      for (const [id, label, w] of row) {
         const key = document.createElement("div");
-        key.className = "key";
-        key.dataset.letter = letter;
-        key.textContent = letter;
-        // Tap support for tablets: behave exactly like a physical press.
-        key.addEventListener("pointerdown", (e) => {
-          e.preventDefault();
-          if (key.classList.contains("lit")) onPress(letter);
-        });
+        key.className = "key" + (isLetter(id) ? "" : " deco");
+        key.style.setProperty("--w", w || 1);
+        key.textContent = isLetter(id) ? id : (label !== undefined ? label : id);
+        if (isLetter(id)) {
+          key.dataset.letter = id;
+          // Tap support for tablets: behave exactly like a physical press.
+          key.addEventListener("pointerdown", (e) => {
+            e.preventDefault();
+            if (key.classList.contains("lit")) onPress(id);
+          });
+          keyEls.set(id, key);
+        } else {
+          // Decorative keys just nudge when touched - inert, but alive.
+          key.addEventListener("pointerdown", (e) => {
+            e.preventDefault();
+            nudge(key);
+          });
+          if (!decoEls.has(id)) decoEls.set(id, []);
+          decoEls.get(id).push(key);
+        }
         rowEl.appendChild(key);
-        keyEls.set(letter, key);
       }
       root.appendChild(rowEl);
     }
-    // A decorative, inert space bar to complete the familiar keyboard shape.
-    const spaceRow = document.createElement("div");
-    spaceRow.className = "key-row";
-    const space = document.createElement("div");
-    space.className = "key space";
-    spaceRow.appendChild(space);
-    root.appendChild(spaceRow);
+  }
+
+  function nudge(key) {
+    key.classList.remove("pressed");
+    void key.offsetWidth;               // restart the transition
+    key.classList.add("pressed");
+    setTimeout(() => key.classList.remove("pressed"), 140);
+  }
+
+  /** Visual nudge for a decorative key by its physical event.key.
+      Returns true if such a key exists on the wireframe. */
+  function flash(physKey) {
+    const els = decoEls.get(physKey);
+    if (!els) return false;
+    els.forEach(nudge);
+    return true;
   }
 
   /** Light exactly the given set of letters; blank the rest. */
   function setLit(letters) {
+    litSet.clear();
+    for (const l of letters) litSet.add(l);
     for (const [letter, key] of keyEls) {
-      key.classList.toggle("lit", letters.has(letter));
+      key.classList.toggle("lit", litSet.has(letter));
     }
   }
+
+  /** Unlearned keys are inert (DESIGN.md: "blank keys do nothing"). */
+  function isLit(letter) { return litSet.has(letter); }
 
   /** Glow one key as the current target (or clear with null). */
   function setTarget(letter) {
@@ -657,7 +975,298 @@ const Keyboard = (() => {
 
   function setHandler(fn) { onPress = fn; }
 
-  return { build, setLit, setTarget, keyScreenPos, setHandler };
+  return { build, setLit, isLit, setTarget, keyScreenPos, setHandler, flash };
+})();
+
+
+/* ---------------------------------------------------------------------
+   Pictures  - one friendly hand-drawn SVG per word, standing on the grass
+   below the cloud. While the word is being spelled it idles with a gentle
+   bob; on completion it celebrates: a happy bounce, the small smile swaps
+   for a big one, an eye winks, tails wag, the duck quacks, wheels spin...
+
+   Drawings are simple template strings (viewBox 0 0 200 200, ground at
+   y~190). Class names drive the CSS success animations:
+     .eye / .wink      - eyes; .wink scrunches shut twice on celebrate
+     .on-idle/.on-cheer- expression parts swapped at celebration
+     .waggle .spin .tip .nod .beak-top .kick .leg-a/.leg-b .arm-a/.arm-b
+   --------------------------------------------------------------------- */
+const Pictures = (() => {
+  const rootEl = document.getElementById("picture");
+  const INK = "#37485F";
+  const SKIN = "#FFD9B3";
+
+  const shadow = `<ellipse cx="100" cy="192" rx="52" ry="7" fill="#4E7F3F" opacity="0.35"/>`;
+
+  /* Two eyes; the right one carries .wink so it can scrunch on celebrate. */
+  const eyes = (lx, rx, y, r = 5) =>
+    `<circle class="eye" cx="${lx}" cy="${y}" r="${r}" fill="${INK}"/>` +
+    `<circle class="eye wink" cx="${rx}" cy="${y}" r="${r}" fill="${INK}"/>`;
+
+  /* A small idle smile that swaps for a big open one on celebrate. */
+  const mouth = (x, y, w) =>
+    `<path class="on-idle" d="M ${x - w} ${y} Q ${x} ${y + w} ${x + w} ${y}"
+       fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>` +
+    `<path class="on-cheer" d="M ${x - w * 1.3} ${y - 2} Q ${x} ${y + w * 2.2} ${x + w * 1.3} ${y - 2} Z"
+       fill="#C9445A" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>`;
+
+  const cheeks = (lx, rx, y) =>
+    `<circle cx="${lx}" cy="${y}" r="6" fill="#FF9E9E" opacity="0.45"/>` +
+    `<circle cx="${rx}" cy="${y}" r="6" fill="#FF9E9E" opacity="0.45"/>`;
+
+  /* Twelve sun rays around (100,96), generated so they stay evenly spaced. */
+  const sunRays = (() => {
+    let s = "";
+    for (let i = 0; i < 12; i++) {
+      const a = (i * 30) * Math.PI / 180;
+      const x1 = (100 + Math.cos(a) * 58).toFixed(1);
+      const y1 = (96 + Math.sin(a) * 58).toFixed(1);
+      const x2 = (100 + Math.cos(a) * 78).toFixed(1);
+      const y2 = (96 + Math.sin(a) * 78).toFixed(1);
+      s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
+              stroke="#FFC94D" stroke-width="9" stroke-linecap="round"/>`;
+    }
+    return s;
+  })();
+
+  const wheel = (cx, cy) =>
+    `<g class="spin"><circle cx="${cx}" cy="${cy}" r="13" fill="${INK}"/>
+      <path d="M${cx} ${cy - 11} V${cy + 11} M${cx - 11} ${cy} H${cx + 11}"
+        stroke="#9FB2CB" stroke-width="2"/>
+      <circle cx="${cx}" cy="${cy}" r="5" fill="#9FB2CB"/></g>`;
+
+  const ART = {
+    MOM: `${shadow}
+      <circle cx="100" cy="76" r="42" fill="#8A5A33"/>
+      <ellipse cx="61" cy="104" rx="11" ry="30" fill="#8A5A33"/>
+      <ellipse cx="139" cy="104" rx="11" ry="30" fill="#8A5A33"/>
+      <path d="M62 190 Q100 104 138 190 Z" fill="#FF8FC0"/>
+      <circle cx="100" cy="84" r="33" fill="${SKIN}"/>
+      <path d="M67 76 Q100 42 133 76 Q100 60 67 76 Z" fill="#8A5A33"/>
+      ${eyes(88, 112, 82)} ${cheeks(82, 118, 94)} ${mouth(100, 96, 9)}`,
+
+    DAD: `${shadow}
+      <path d="M60 190 Q60 130 100 130 Q140 130 140 190 Z" fill="#5BB8F0"/>
+      <circle cx="100" cy="84" r="33" fill="${SKIN}"/>
+      <path d="M67 80 Q67 48 100 48 Q133 48 133 80 Q100 64 67 80 Z" fill="#4A3624"/>
+      ${eyes(88, 112, 84)} ${cheeks(82, 118, 96)} ${mouth(100, 98, 9)}`,
+
+    INDI: `${shadow}
+      <path d="M66 190 Q66 138 100 138 Q134 138 134 190 Z" fill="#6FCF86"/>
+      <circle cx="100" cy="96" r="28" fill="${SKIN}"/>
+      <circle cx="78" cy="76" r="11" fill="#3E2E20"/>
+      <circle cx="100" cy="68" r="12" fill="#3E2E20"/>
+      <circle cx="122" cy="76" r="11" fill="#3E2E20"/>
+      <circle cx="68" cy="90" r="8" fill="#3E2E20"/>
+      <circle cx="132" cy="90" r="8" fill="#3E2E20"/>
+      ${eyes(90, 110, 94, 4.5)} ${cheeks(84, 116, 104)} ${mouth(100, 106, 8)}`,
+
+    CAT: `${shadow}
+      <path class="waggle" d="M140 156 Q172 148 166 116" stroke="#F2A65A"
+        stroke-width="11" fill="none" stroke-linecap="round"/>
+      <ellipse cx="100" cy="152" rx="44" ry="36" fill="#F2A65A"/>
+      <polygon points="70,68 79,32 97,58" fill="#F2A65A"/>
+      <polygon points="76,62 81,42 91,56" fill="#F5C6D0"/>
+      <polygon points="130,68 121,32 103,58" fill="#F2A65A"/>
+      <polygon points="124,62 119,42 109,56" fill="#F5C6D0"/>
+      <circle cx="100" cy="86" r="34" fill="#F2A65A"/>
+      ${eyes(87, 113, 80)}
+      <polygon points="95,92 105,92 100,98" fill="#E4738A"/>
+      <path d="M66 92 L38 88 M66 98 L40 104 M134 92 L162 88 M134 98 L160 104"
+        stroke="${INK}" stroke-width="2.5" stroke-linecap="round"/>
+      ${mouth(100, 101, 7)}`,
+
+    DOG: `${shadow}
+      <path class="waggle" d="M140 154 Q172 142 168 112" stroke="#B98156"
+        stroke-width="11" fill="none" stroke-linecap="round"/>
+      <ellipse cx="100" cy="152" rx="44" ry="36" fill="#B98156"/>
+      <circle cx="100" cy="84" r="34" fill="#B98156"/>
+      <ellipse cx="68" cy="76" rx="12" ry="24" fill="#8A5A33" transform="rotate(16 68 76)"/>
+      <ellipse cx="132" cy="76" rx="12" ry="24" fill="#8A5A33" transform="rotate(-16 132 76)"/>
+      <ellipse cx="100" cy="97" rx="18" ry="13" fill="#E8C9A8"/>
+      <circle cx="100" cy="91" r="6" fill="${INK}"/>
+      ${eyes(86, 114, 76)} ${mouth(100, 102, 7)}`,
+
+    PIG: `${shadow}
+      <path class="waggle" d="M144 158 q16 -2 12 -14 q-12 -6 -4 -12" stroke="#EF8CA4"
+        stroke-width="6" fill="none" stroke-linecap="round"/>
+      <ellipse cx="100" cy="154" rx="46" ry="34" fill="#F7A8B8"/>
+      <polygon points="72,60 62,36 90,52" fill="#F7A8B8"/>
+      <polygon points="128,60 138,36 110,52" fill="#F7A8B8"/>
+      <circle cx="100" cy="84" r="36" fill="#F7A8B8"/>
+      ${eyes(84, 116, 74)}
+      <ellipse cx="100" cy="94" rx="15" ry="11" fill="#EF8CA4"/>
+      <circle cx="94" cy="94" r="2.6" fill="#B65C77"/>
+      <circle cx="106" cy="94" r="2.6" fill="#B65C77"/>
+      ${mouth(100, 110, 7)}`,
+
+    SUN: `<g class="spin">${sunRays}</g>
+      <circle cx="100" cy="96" r="48" fill="#FFD166"/>
+      ${eyes(84, 116, 88, 6)} ${cheeks(78, 122, 102)} ${mouth(100, 104, 10)}`,
+
+    BUS: `${shadow}
+      <rect x="52" y="50" width="96" height="120" rx="16" fill="#FFC94D"/>
+      <rect x="64" y="64" width="72" height="42" rx="8" fill="#CBE7F7"/>
+      ${eyes(84, 116, 88, 6)}
+      <circle cx="66" cy="140" r="6" fill="#FFF3C2"/>
+      <circle cx="134" cy="140" r="6" fill="#FFF3C2"/>
+      ${mouth(100, 128, 9)}
+      <rect x="56" y="150" width="88" height="12" rx="6" fill="#E3E9F2"/>
+      ${wheel(72, 172)} ${wheel(128, 172)}`,
+
+    HAT: `${shadow}
+      <path d="M64 190 Q64 148 100 148 Q136 148 136 190 Z" fill="#6FCF86"/>
+      <circle cx="100" cy="112" r="34" fill="${SKIN}"/>
+      <g class="tip">
+        <path d="M74 84 Q74 40 100 40 Q126 40 126 84 Z" fill="#B191E8"/>
+        <rect x="74" y="70" width="52" height="12" fill="#8F6BD1"/>
+        <ellipse cx="100" cy="86" rx="46" ry="10" fill="#B191E8"/>
+      </g>
+      ${eyes(88, 112, 110)} ${cheeks(82, 118, 122)} ${mouth(100, 124, 8)}`,
+
+    BED: `<ellipse cx="100" cy="192" rx="72" ry="7" fill="#4E7F3F" opacity="0.35"/>
+      <rect x="24" y="64" width="16" height="126" rx="7" fill="#8A5A33"/>
+      <rect x="160" y="98" width="16" height="92" rx="7" fill="#8A5A33"/>
+      <rect x="32" y="124" width="136" height="24" rx="8" fill="#FFFFFF"/>
+      <rect x="70" y="118" width="96" height="32" rx="8" fill="#FF8FC0"/>
+      <ellipse cx="56" cy="118" rx="20" ry="11" fill="#FFF7EA"/>
+      <circle cx="56" cy="102" r="15" fill="${SKIN}"/>
+      <path d="M43 98 Q56 84 69 98 Q56 92 43 98 Z" fill="#4A3624"/>
+      <path class="on-idle" d="M46 102 q3 3 6 0 M58 102 q3 3 6 0"
+        stroke="${INK}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <g class="on-cheer">
+        <circle cx="49" cy="102" r="3" fill="${INK}"/>
+        <circle cx="61" cy="102" r="3" fill="${INK}"/>
+      </g>
+      ${mouth(56, 109, 5)}
+      <text class="on-idle" x="88" y="84" font-size="22" fill="#9FBBD4" font-weight="700">z</text>
+      <text class="on-idle" x="104" y="66" font-size="16" fill="#9FBBD4" font-weight="700">z</text>`,
+
+    COW: `${shadow}
+      <ellipse cx="100" cy="154" rx="46" ry="34" fill="#F5F0E6"/>
+      <ellipse cx="82" cy="158" rx="15" ry="11" fill="#5A4A3F"/>
+      <polygon points="74,52 64,32 84,44" fill="#D9CDBE"/>
+      <polygon points="126,52 136,32 116,44" fill="#D9CDBE"/>
+      <ellipse cx="62" cy="70" rx="11" ry="8" fill="#E8C9A8" transform="rotate(-18 62 70)"/>
+      <ellipse cx="138" cy="70" rx="11" ry="8" fill="#E8C9A8" transform="rotate(18 138 70)"/>
+      <circle cx="100" cy="82" r="34" fill="#F5F0E6"/>
+      <ellipse cx="118" cy="64" rx="13" ry="10" fill="#5A4A3F" opacity="0.85"/>
+      ${eyes(85, 115, 74)}
+      <ellipse cx="100" cy="98" rx="20" ry="13" fill="#F0B7C8"/>
+      <circle cx="93" cy="97" r="2.6" fill="#B65C77"/>
+      <circle cx="107" cy="97" r="2.6" fill="#B65C77"/>
+      ${mouth(100, 104, 6)}`,
+
+    FOX: `${shadow}
+      <path class="waggle" d="M138 158 Q176 150 170 118" stroke="#F2884B"
+        stroke-width="14" fill="none" stroke-linecap="round"/>
+      <circle cx="170" cy="118" r="9" fill="#FFF7EA"/>
+      <ellipse cx="100" cy="154" rx="42" ry="34" fill="#F2884B"/>
+      <polygon points="66,64 73,24 95,52" fill="#F2884B"/>
+      <polygon points="72,58 76,38 88,50" fill="#4A3B33"/>
+      <polygon points="134,64 127,24 105,52" fill="#F2884B"/>
+      <polygon points="128,58 124,38 112,50" fill="#4A3B33"/>
+      <circle cx="100" cy="84" r="34" fill="#F2884B"/>
+      <circle cx="85" cy="99" r="15" fill="#FFF7EA"/>
+      <circle cx="115" cy="99" r="15" fill="#FFF7EA"/>
+      ${eyes(84, 116, 76)}
+      <circle cx="100" cy="97" r="5" fill="${INK}"/>
+      ${mouth(100, 106, 6)}`,
+
+    RUN: `${shadow}
+      <path d="M30 96 h22 M24 118 h18 M32 140 h22" stroke="#FFFFFF"
+        stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+      <g class="leg-a">
+        <path d="M100 122 L82 154 L76 184" stroke="#4A6FA5" stroke-width="11"
+          fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="76" cy="184" r="7" fill="${INK}"/>
+      </g>
+      <g class="leg-b">
+        <path d="M100 122 L120 150 L134 176" stroke="#4A6FA5" stroke-width="11"
+          fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="134" cy="176" r="7" fill="${INK}"/>
+      </g>
+      <path d="M100 78 L100 124" stroke="#FF7B7B" stroke-width="17" stroke-linecap="round"/>
+      <path class="arm-a" d="M100 90 L76 110" stroke="${SKIN}" stroke-width="9" stroke-linecap="round"/>
+      <path class="arm-b" d="M100 90 L126 76" stroke="${SKIN}" stroke-width="9" stroke-linecap="round"/>
+      <circle cx="100" cy="56" r="19" fill="${SKIN}"/>
+      <path d="M81 52 Q100 32 119 52 Q100 42 81 52 Z" fill="#3E2E20"/>
+      ${eyes(93, 107, 54, 3.8)} ${mouth(100, 64, 6)}`,
+
+    LEG: `<ellipse cx="100" cy="192" rx="44" ry="7" fill="#4E7F3F" opacity="0.35"/>
+      <path d="M74 40 h52 v26 q0 12 -12 12 h-28 q-12 0 -12 -12 Z" fill="#5BB8F0"/>
+      <g class="kick">
+        <path d="M100 66 L93 120 L98 158" stroke="${SKIN}" stroke-width="20"
+          fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M96 144 L98 160" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round"/>
+        <path d="M86 160 h28 q16 0 16 13 q0 9 -9 9 h-35 q-9 0 -9 -9 v-4 q0 -9 9 -9 Z" fill="#FF7B7B"/>
+        <path d="M92 166 l6 5 M100 165 l6 5" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+      </g>`,
+
+    JAM: `<ellipse cx="100" cy="188" rx="46" ry="7" fill="#4E7F3F" opacity="0.35"/>
+      <rect x="64" y="80" width="72" height="98" rx="14" fill="#E4556B"/>
+      <rect x="72" y="94" width="10" height="66" rx="5" fill="#FFFFFF" opacity="0.35"/>
+      <rect x="58" y="62" width="84" height="22" rx="9" fill="#B191E8"/>
+      <rect x="74" y="106" width="52" height="42" rx="8" fill="#FFF7EA"/>
+      ${eyes(90, 110, 119, 3.5)} ${cheeks(86, 114, 127)} ${mouth(100, 128, 6)}`,
+
+    KID: `${shadow}
+      <path d="M66 190 Q66 138 100 138 Q134 138 134 190 Z" fill="#FFC94D"/>
+      <circle cx="100" cy="96" r="28" fill="${SKIN}"/>
+      <circle cx="64" cy="84" r="9" fill="#6B4226"/>
+      <circle cx="136" cy="84" r="9" fill="#6B4226"/>
+      <path d="M72 92 Q100 56 128 92 Q100 74 72 92 Z" fill="#6B4226"/>
+      ${eyes(90, 110, 94, 4.5)} ${cheeks(84, 116, 104)} ${mouth(100, 106, 8)}`,
+
+    YES: `${shadow}
+      <g class="nod">
+        <circle cx="100" cy="84" r="36" fill="#FFD166"/>
+        ${eyes(86, 114, 78, 5.5)} ${cheeks(78, 122, 92)} ${mouth(100, 94, 10)}
+      </g>
+      <rect x="80" y="138" width="44" height="34" rx="11" fill="${SKIN}"/>
+      <rect x="70" y="112" width="15" height="36" rx="7.5" fill="${SKIN}"
+        transform="rotate(-22 78 130)"/>`,
+
+    VAN: `${shadow}
+      <rect x="36" y="98" width="128" height="76" rx="14" fill="#5BB8F0"/>
+      <rect x="52" y="108" width="66" height="26" rx="6" fill="#CBE7F7"/>
+      <rect x="132" y="108" width="24" height="26" rx="6" fill="#CBE7F7"/>
+      <circle cx="144" cy="120" r="4.5" fill="${INK}" class="eye"/>
+      ${mouth(148, 156, 6)}
+      <circle cx="162" cy="140" r="5" fill="#FFF3C2"/>
+      ${wheel(68, 176)} ${wheel(136, 176)}`,
+
+    QUACK: `${shadow}
+      <path d="M76 184 l-12 7 h24 Z" fill="#F2884B"/>
+      <path d="M104 184 l-12 7 h24 Z" fill="#F2884B"/>
+      <path d="M52 140 L34 124 L56 126 Z" fill="#F2C94C"/>
+      <ellipse cx="92" cy="150" rx="46" ry="35" fill="#FFD166"/>
+      <ellipse class="waggle" cx="78" cy="152" rx="22" ry="14" fill="#F2C94C"
+        transform="rotate(-14 78 152)"/>
+      <circle cx="126" cy="88" r="26" fill="#FFD166"/>
+      <circle cx="134" cy="80" r="4.5" fill="${INK}" class="eye"/>
+      <path class="beak-top" d="M148 82 q24 -2 28 8 q-18 8 -28 4 Z" fill="#F2884B"/>
+      <path d="M148 92 q18 6 24 4 q-12 9 -24 3 Z" fill="#DE7238"/>`,
+  };
+
+  /** Show the picture for a word (hidden if a future word has no art yet). */
+  function show(word) {
+    rootEl.classList.remove("celebrate");
+    const art = ART[word];
+    if (!art) {
+      rootEl.style.display = "none";
+      rootEl.innerHTML = "";
+      return;
+    }
+    rootEl.style.display = "";
+    rootEl.innerHTML =
+      `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">${art}</svg>`;
+  }
+
+  /** The success reward: smile, wink, wag, quack, spin... */
+  function celebrate() { rootEl.classList.add("celebrate"); }
+
+  return { show, celebrate };
 })();
 
 
@@ -687,12 +1296,15 @@ const Balloons = (() => {
 
   /**
    * Build one letter-shaped bubble as a DOM element.
-   * The glyph is used three ways so the bubble reads as a glossy letter:
-   *   - a clip-path (so the glossy fill + highlight stay inside the letter)
-   *   - a translucent gradient body clipped to the glyph
-   *   - a white rim stroke drawn on top
-   * The wrapper is sized so the glyph renders at the same on-screen size as
-   * the cloud gap it will fill (Cloud.scale()), guaranteeing a snug fit.
+   * The glyph is used several ways so the bubble reads as a glossy letter:
+   *   - a clip-path (so the glossy fill + highlights stay inside the letter)
+   *   - a radial-gradient body: a bright off-centre hotspot fading to a
+   *     saturated rim, like light on a curved soap film
+   *   - a specular highlight + small sparkle inside the glyph
+   *   - a soft outer glow and a crisp white rim stroke on top (the "skin")
+   * It wobbles gently while floating. The wrapper is sized so the glyph
+   * renders at the same on-screen size as the cloud gap it will fill
+   * (Cloud.scale()), guaranteeing a snug fit.
    */
   function makeBubble(letter, tint) {
     const id = ++uid;
@@ -708,11 +1320,13 @@ const Balloons = (() => {
     wrap.style.width = (VB_W * pxPerUnit) + "px";
 
     const svg = svgEl("svg", { viewBox: `0 0 ${VB_W} ${VB_H}`, width: "100%" });
+    if (!reduceMotion) svg.classList.add("wobble");
 
     // Shared glyph attributes (identical to the cloud gap's glyph).
     const glyphAttrs = {
-      x: cx, y: cy, "font-size": S, "font-family": "var(--font-display)",
-      "font-weight": 700, "text-anchor": "middle", "dominant-baseline": "middle",
+      x: cx, y: cy, "font-size": S, "font-weight": 700,
+      "text-anchor": "middle", "dominant-baseline": "middle",
+      style: "font-family: var(--font-display)",
     };
 
     const defs = svgEl("defs");
@@ -724,30 +1338,46 @@ const Balloons = (() => {
     clip.appendChild(clipText);
     defs.appendChild(clip);
 
-    // Glossy top-to-bottom gradient body (translucent, like a bubble).
-    const grad = svgEl("linearGradient", {
-      id: `bubbleGrad${id}`, x1: "0", y1: "0", x2: "0", y2: "1",
+    // Radial gloss: bright hotspot up-left, deepening colour toward the rim.
+    const grad = svgEl("radialGradient", {
+      id: `bubbleGrad${id}`, cx: "0.35", cy: "0.28", r: "0.9",
     });
-    grad.appendChild(svgEl("stop", { offset: "0",  "stop-color": "#FFFFFF", "stop-opacity": "0.85" }));
-    grad.appendChild(svgEl("stop", { offset: "0.45", "stop-color": tint,     "stop-opacity": "0.75" }));
-    grad.appendChild(svgEl("stop", { offset: "1",  "stop-color": tint,     "stop-opacity": "0.9"  }));
+    const stop = (offset, color, opacity, mixed) => {
+      const s = svgEl("stop", { offset, "stop-color": color, "stop-opacity": opacity });
+      if (mixed) s.style.stopColor = mixed;   // deeper rim where color-mix exists
+      return s;
+    };
+    grad.appendChild(stop("0", "#FFFFFF", "0.95"));
+    grad.appendChild(stop("0.35", tint, "0.55"));
+    grad.appendChild(stop("0.78", tint, "0.82"));
+    grad.appendChild(stop("1", tint, "0.95", `color-mix(in srgb, ${tint} 62%, #35507A)`));
     defs.appendChild(grad);
     svg.appendChild(defs);
 
-    // Body + a soft highlight, both clipped to the glyph.
+    // Body + highlights, all clipped to the glyph.
     const clipped = svgEl("g", { "clip-path": `url(#bubbleClip${id})` });
     clipped.appendChild(svgEl("rect", {
       x: 0, y: 0, width: VB_W, height: VB_H, fill: `url(#bubbleGrad${id})`,
     }));
     clipped.appendChild(svgEl("ellipse", {
-      cx: cx - S * 0.18, cy: cy - S * 0.22, rx: S * 0.22, ry: S * 0.30,
+      cx: cx - S * 0.16, cy: cy - S * 0.24, rx: S * 0.22, ry: S * 0.3,
+      fill: "rgba(255,255,255,0.5)",
+      transform: `rotate(-18 ${cx - S * 0.16} ${cy - S * 0.24})`,
+    }));
+    clipped.appendChild(svgEl("circle", {
+      cx: cx + S * 0.22, cy: cy + S * 0.26, r: S * 0.07,
       fill: "rgba(255,255,255,0.55)",
     }));
     svg.appendChild(clipped);
 
-    // White rim stroke on top for a bubble edge.
+    // Soft outer glow, then a crisp white rim on top: the bubble's skin.
+    const glow = svgEl("text", Object.assign({}, glyphAttrs, {
+      fill: "none", stroke: "rgba(255,255,255,0.3)", "stroke-width": S * 0.11,
+    }));
+    glow.textContent = letter;
+    svg.appendChild(glow);
     const rim = svgEl("text", Object.assign({}, glyphAttrs, {
-      fill: "none", stroke: "rgba(255,255,255,0.85)", "stroke-width": S * 0.04,
+      fill: "none", stroke: "rgba(255,255,255,0.9)", "stroke-width": S * 0.055,
     }));
     rim.textContent = letter;
     svg.appendChild(rim);
@@ -801,6 +1431,7 @@ const Balloons = (() => {
     setTimeout(() => {
       // Landed: squish, play the squelch, then hand off to the solid letter.
       Audio.squish();
+      inner.classList.remove("wobble");
       inner.classList.add("squish");
       setTimeout(() => {
         onArrive();                       // Cloud.fill pops the solid letter in
@@ -816,14 +1447,7 @@ const Balloons = (() => {
     if (liveCount >= CONFIG.balloonCap) return;
     liveCount++;
 
-    const tints = [
-      getComputedStyle(document.documentElement).getPropertyValue("--candy-1").trim(),
-      getComputedStyle(document.documentElement).getPropertyValue("--candy-2").trim(),
-      getComputedStyle(document.documentElement).getPropertyValue("--candy-3").trim(),
-      getComputedStyle(document.documentElement).getPropertyValue("--candy-5").trim(),
-      getComputedStyle(document.documentElement).getPropertyValue("--candy-6").trim(),
-    ];
-    const tint = tints[Math.floor(Math.random() * tints.length)];
+    const tint = CANDY[Math.floor(Math.random() * CANDY.length)];
     const wrap = makeBubble(letter, tint);
     stage.appendChild(wrap);
     place(wrap, fromKey.x, fromKey.y);
@@ -858,6 +1482,7 @@ const Game = (() => {
     word: "",
     activeSlot: 0,
     accepting: false,   // false during celebration / transitions
+    inFlight: false,    // a correct bubble is mid-rise (guards double-fills)
   };
 
   function startLevel(index) {
@@ -865,8 +1490,11 @@ const Game = (() => {
     state.word = LEVELS[index];
     state.activeSlot = 0;
     state.accepting = true;
+    state.inFlight = false;
 
     Cloud.setWord(state.word);
+    Cloud.setActive(0);
+    Pictures.show(state.word);
     Keyboard.setLit(litLettersUpTo(index));
     Keyboard.setTarget(state.word[0]);
   }
@@ -877,26 +1505,38 @@ const Game = (() => {
       completeWord();
     } else {
       Keyboard.setTarget(state.word[state.activeSlot]);
+      Cloud.setActive(state.activeSlot);
     }
   }
 
+  /**
+   * The big reward, concentrated at word completion:
+   * banner + the picture comes alive + a success jingle, then the word is
+   * sounded out slowly letter by letter ("Mmm" "oh" "mmm") and finally
+   * spoken whole ("Mom!"). The next level waits for all of it.
+   */
   function completeWord() {
     state.accepting = false;
     Keyboard.setTarget(null);
+    Cloud.setActive(null);
     showBanner(state.word);
-    if (window.speechSynthesis) {
-      setTimeout(() => {
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(state.word);
-        u.rate = 0.85; u.pitch = 1.1;
-        window.speechSynthesis.speak(u);
-      }, 300);
-    }
+    Pictures.celebrate();
+    Audio.jingle();
+
+    const letters = [...state.word];
+    letters.forEach((letter, i) => {
+      setTimeout(() => Audio.play(letter, { interrupt: false }),
+        CONFIG.spellStartMs + i * CONFIG.spellLetterMs);
+    });
+    const wordAt = CONFIG.spellStartMs + letters.length * CONFIG.spellLetterMs
+      + CONFIG.spellWordGapMs;
+    setTimeout(() => Audio.sayWord(state.word), wordAt);
+
     setTimeout(() => {
       hideBanner();
       const next = (state.levelIndex + 1) % LEVELS.length;   // loop back at end
       startLevel(next);
-    }, CONFIG.nextLevelDelayMs);
+    }, wordAt + CONFIG.nextLevelDelayMs);
   }
 
   function showBanner(text) {
@@ -905,37 +1545,65 @@ const Game = (() => {
   }
   function hideBanner() { banner.classList.remove("show"); }
 
-  /** Central handler for every key/tap. Sound ALWAYS plays. */
+  /** Central handler for every key/tap. Sound always plays for lit keys. */
   function handlePress(letter) {
+    if (!Keyboard.isLit(letter)) return;   // unlearned keys are inert
     Audio.play(letter);
 
-    const isTarget =
-      state.accepting && letter === state.word[state.activeSlot];
+    const current = state.word[state.activeSlot];
 
-    if (isTarget) {
+    // The target press: launch the bubble to the active gap. inFlight
+    // guards the rise - without it, a quick double-press would fill the
+    // same slot twice and skip a letter.
+    if (state.accepting && !state.inFlight && letter === current) {
       const slot = state.activeSlot;              // capture before it advances
       const fromKey = Keyboard.keyScreenPos(letter);
       const toSlot = Cloud.slotScreenPos(slot);
+      state.inFlight = true;
       Keyboard.setTarget(null);                   // stop glow while it flies
+      Cloud.setActive(null);
       Balloons.launchToTarget(letter, fromKey, toSlot, candyFor(slot), () => {
+        state.inFlight = false;
         Cloud.fill(slot);
         advance();
       });
-    } else {
-      // Wrong or extra key: a balloon drifts by, but nothing lands.
-      const fromKey = Keyboard.keyScreenPos(letter);
-      Balloons.launchStray(letter, fromKey);
+      return;
     }
+
+    // Re-pressing the letter that just worked: its bubble flies back to
+    // the (already filled) gap and lands there again - a friendly rep,
+    // no progression change.
+    const prevSlot = state.activeSlot - 1;
+    if (state.accepting && prevSlot >= 0 &&
+        letter === state.word[prevSlot] && letter !== current) {
+      Balloons.launchToTarget(letter, Keyboard.keyScreenPos(letter),
+        Cloud.slotScreenPos(prevSlot), candyFor(prevSlot),
+        () => Cloud.refill(prevSlot));
+      return;
+    }
+
+    // Wrong or extra key: a balloon drifts by, but nothing lands.
+    Balloons.launchStray(letter, Keyboard.keyScreenPos(letter));
   }
 
   function init() {
     Keyboard.build();
     Keyboard.setHandler(handlePress);
     window.addEventListener("keydown", (e) => {
-      const letter = e.key.toUpperCase();
-      if (letter >= "A" && letter <= "Z" && letter.length === 1) {
+      // Modifier keys themselves get a decorative nudge...
+      if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") {
+        Keyboard.flash(e.key);
+        return;
+      }
+      // ...but shortcut combos (Cmd/Ctrl+R...) are left for the browser.
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      const letter = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+      if (letter.length === 1 && letter >= "A" && letter <= "Z") {
         e.preventDefault();
         handlePress(letter);
+      } else if (Keyboard.flash(e.key)) {
+        e.preventDefault();   // decorative key: acknowledged, but inert
       }
     });
   }
