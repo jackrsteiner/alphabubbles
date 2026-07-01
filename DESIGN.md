@@ -142,8 +142,8 @@ is the source of truth for *implementation*.
   arpeggio with a soft closing chord. Same no-assets rationale as the squish.
 - **Word-completion speech:** the word is sounded out **letter by letter,
   slowly, with hardly any pause** (via `Audio.play`, so recorded clips are
-  used when present), then spoken **whole**. These utterances queue
-  (`interrupt: false`) instead of cancelling each other.
+  used when present), then spoken **whole**. The sequence is timer-driven;
+  each utterance supersedes the previous (newest-wins).
 - **TTS reliability:** Chromium silently drops utterances spoken too soon
   after `cancel()`, can wedge its synthesizer in a paused state (silently
   swallowing everything queued), and can GC a pending utterance. `Audio.speak`
