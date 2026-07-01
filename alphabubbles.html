@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Alphabubbles</title>
+
+<!-- Rounded, toddler-friendly display font. Falls back to a system rounded
+     stack if offline, so the game still works with no network. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+  /* ===================================================================
+     DESIGN TOKENS
+     One place for every colour, size and timing. Tune the feel here.
+     =================================================================== */
+  :root {
+    /* Sky (top -> horizon) */
+    --sky-top:      #6FB1E0;
+    --sky-mid:      #A9D6F0;
+    --sky-horizon:  #FBE9CE;
+
+    /* Ground */
+    --meadow-top:   #8FD07A;
+    --meadow-bot:   #6FB85C;
+
+    /* Cloud */
+    --cloud:        #FFFFFF;
+    --cloud-shadow: #C7DBEC;
+    --cloud-guide:  #9FBBD4;  /* faint hint letter shown inside each gap */
+
+    /* Ink / UI text */
+    --ink:          #37485F;
+    --ink-soft:     #6A7C93;
+
+    /* Candy palette for balloons & filled letters (cycled by slot index) */
+    --candy-1: #FF7B7B;
+    --candy-2: #FFC94D;
+    --candy-3: #6FCF86;
+    --candy-4: #5BB8F0;
+    --candy-5: #B191E8;
+    --candy-6: #FF8FC0;
+
+    /* Keyboard */
+    --key-face:     rgba(255, 255, 255, 0.55);
+    --key-edge:     rgba(255, 255, 255, 0.85);
+    --key-blank:    rgba(255, 255, 255, 0.22);
+    --key-lit-ink:  #37485F;
+    --key-glow:     #FFD166;
+
+    /* Type */
+    --font-display: "Fredoka", "Trebuchet MS", "Segoe UI Rounded", system-ui, sans-serif;
+
+    /* Layout */
+    --keyboard-height: 34vh;
+    --key-gap: 0.6vmin;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: var(--font-display);
+    color: var(--ink);
+    background: var(--sky-top);
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* The whole stage: sky on top, meadow + keyboard at the bottom. */
+  #stage {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background:
+      linear-gradient(to bottom,
+        var(--sky-top)     0%,
+        var(--sky-mid)     45%,
+        var(--sky-horizon) 100%);
+  }
+
+  /* Soft rolling meadow the keyboard sits on. */
+  #meadow {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: calc(var(--keyboard-height) + 6vh);
+    background: linear-gradient(to bottom, var(--meadow-top), var(--meadow-bot));
+    border-top-left-radius: 50% 12vh;
+    border-top-right-radius: 50% 12vh;
+    box-shadow: inset 0 3px 0 rgba(255,255,255,0.25);
+    z-index: 1;
+  }
+
+  /* ===================================================================
+     WORD CLOUD  (SVG: the word being spelled, as gaps in one cloud)
+     =================================================================== */
+  #cloud-layer {
+    position: absolute;
+    top: 4vh; left: 0; right: 0;
+    display: flex;
+    justify-content: center;
+    z-index: 2;
+    pointer-events: none;
+  }
+  #cloud-svg { width: min(92vw, 900px); height: auto; overflow: visible; }
+
+  .filled-letter {
+    font-family: var(--font-display);
+    font-weight: 700;
+    /* Pop-in when a bubble lands and becomes the solid letter. */
+    animation: settle 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  @keyframes settle {
+    0%   { opacity: 0; transform: scale(0.4) translateY(8px); }
+    100% { opacity: 1; transform: scale(1)   translateY(0);   }
+  }
+
+  /* ===================================================================
+     BUBBLES  (letter-SHAPED bubbles that rise from the keyboard)
+     A bubble is the letter's own glyph, rendered glossy and translucent.
+     Because it uses the same glyph + size as the cloud gap, it fits the
+     hole exactly when it lands.
+     =================================================================== */
+  .bubble {
+    position: absolute;
+    z-index: 3;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+  .bubble svg { display: block; overflow: visible; }
+
+  /* Squish-on-landing: a quick squash-and-settle applied to the inner svg
+     so it composes cleanly with the outer element's travel transform. */
+  .bubble .squish { animation: squish 0.26s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  @keyframes squish {
+    0%   { transform: scale(1, 1); }
+    35%  { transform: scale(1.18, 0.78); }
+    70%  { transform: scale(0.94, 1.06); }
+    100% { transform: scale(1, 1); }
+  }
+
+  /* ===================================================================
+     KEYBOARD  (wireframe; only "learned" letters are shown)
+     =================================================================== */
+  #keyboard {
+    position: absolute;
+    left: 0; right: 0; bottom: 2vh;
+    height: var(--keyboard-height);
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: var(--key-gap);
+    padding: 0 2vw;
+  }
+  .key-row { display: flex; gap: var(--key-gap); justify-content: center; width: 100%; }
+
+  .key {
+    flex: 1 1 0;
+    max-width: 8vmin;
+    aspect-ratio: 1 / 1.15;
+    border-radius: 1.4vmin;
+    background: var(--key-blank);
+    border: 0.3vmin solid var(--key-edge);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4.2vmin;
+    font-weight: 600;
+    color: transparent;               /* blank keys show no letter */
+    transition: transform 0.08s ease, background 0.2s ease, box-shadow 0.2s ease;
+  }
+  .key.space { flex: 6 1 0; max-width: 40vmin; aspect-ratio: auto; height: 6vmin; }
+
+  /* A "learned" letter: visible and pressable. */
+  .key.lit {
+    background: var(--key-face);
+    color: var(--key-lit-ink);
+    cursor: pointer;
+  }
+  .key.lit:active { transform: translateY(2px) scale(0.96); }
+
+  /* The current target key: gently pulsing glow to guide the eye. */
+  .key.target {
+    box-shadow: 0 0 0 0.4vmin var(--key-glow), 0 0 3vmin var(--key-glow);
+    animation: keyPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes keyPulse {
+    0%, 100% { box-shadow: 0 0 0 0.4vmin var(--key-glow), 0 0 2vmin var(--key-glow); }
+    50%      { box-shadow: 0 0 0 0.7vmin var(--key-glow), 0 0 5vmin var(--key-glow); }
+  }
+
+  /* ===================================================================
+     CELEBRATION + START GATE
+     =================================================================== */
+  #banner {
+    position: absolute;
+    top: 34vh; left: 0; right: 0;
+    text-align: center;
+    font-size: 9vmin;
+    font-weight: 700;
+    color: var(--ink);
+    text-shadow: 0 2px 0 rgba(255,255,255,0.6);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 5;
+    pointer-events: none;
+  }
+  #banner.show { opacity: 1; animation: cheer 0.6s ease; }
+  @keyframes cheer {
+    0% { transform: scale(0.6); } 60% { transform: scale(1.15); } 100% { transform: scale(1); }
+  }
+
+  #start-gate {
+    position: absolute; inset: 0;
+    z-index: 20;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 3vh;
+    background: linear-gradient(to bottom, var(--sky-top), var(--sky-horizon));
+  }
+  #start-gate h1 {
+    font-size: 11vmin; font-weight: 700; color: #FFFFFF;
+    text-shadow: 0 3px 0 rgba(0,0,0,0.08);
+    letter-spacing: 0.02em;
+  }
+  #start-button {
+    font-family: var(--font-display);
+    font-size: 6vmin; font-weight: 600;
+    color: var(--ink);
+    background: #FFFFFF;
+    border: none;
+    padding: 2.5vh 8vw;
+    border-radius: 999px;
+    box-shadow: 0 0.8vh 0 var(--cloud-shadow);
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+  #start-button:active { transform: translateY(0.4vh); box-shadow: 0 0.4vh 0 var(--cloud-shadow); }
+  #start-button:focus-visible { outline: 0.5vmin solid var(--candy-4); outline-offset: 0.5vmin; }
+
+  /* Respect users who prefer less motion: keep the game, calm the drift. */
+  @media (prefers-reduced-motion: reduce) {
+    .key.target { animation: none; }
+    .bubble { transition: none !important; }
+  }
+</style>
+</head>
+
+<body>
+  <div id="stage">
+    <div id="cloud-layer"><svg id="cloud-svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div id="banner"></div>
+    <div id="meadow"></div>
+    <div id="keyboard"></div>
+
+    <div id="start-gate">
+      <h1>Alphabubbles</h1>
+      <button id="start-button" type="button">Tap to start</button>
+    </div>
+  </div>
+
+<script>
+"use strict";
+
+/* =====================================================================
+   ALPHABUBBLES
+   A gentle alphabet + typing game for a very young child.
+
+   Press the glowing key -> a letter-SHAPED bubble of that letter floats
+   up and nests into its matching letter-shaped gap in the cloud, squishing
+   into place and becoming a bright solid letter. Wrong keys still make
+   their sound and float a bubble by, but nothing lands. No shooting, no
+   failure, no timers.
+
+   The code is organised into small, single-purpose modules:
+     CONFIG        - every tunable knob
+     LEVELS        - the curriculum (edit this to change words/order)
+     litLettersUpTo- derives which keys are "learned" from the word list
+     Audio         - recorded-file playback with automatic TTS fallback
+     LetterLayout  - one source of truth for glyph position (gap = guide = fill)
+     Cloud         - builds the word cloud + fills letters
+     Keyboard      - wireframe keys, lit letters, target glow, tap support
+     Balloons      - spawning, the live cap, rise + drift animation
+     Game          - the state machine that ties it together
+   ===================================================================== */
+
+
+/* ---------------------------------------------------------------------
+   CONFIG  - tune the feel of the game here.
+   --------------------------------------------------------------------- */
+const CONFIG = {
+  balloonCap: 14,          // max balloons alive at once (sound always plays)
+  balloonRiseMs: 1400,     // how long a correct balloon takes to reach its gap
+  strayRiseMs: 3200,       // how long a wrong/other balloon drifts up and off
+  bannerMs: 1500,          // celebration banner duration on word complete
+  nextLevelDelayMs: 1900,  // pause after a word before the next one
+  tts: {
+    rate: 0.8,             // slightly slow, clearer for a toddler
+    pitch: 1.15,           // slightly high, friendlier
+  },
+  soundsPath: "sounds/",   // drop a.mp3 ... z.mp3 here to replace the TTS voice
+};
+
+/* ---------------------------------------------------------------------
+   LEVELS  - the curriculum. Edit / reorder freely.
+   Each level adds at most one or two new letters and reuses old ones.
+   "INDI" is the child's name; the finale "QUACK" ends on a duck noise.
+   --------------------------------------------------------------------- */
+const LEVELS = [
+  "MOM", "DAD", "INDI", "CAT", "DOG", "PIG", "SUN", "BUS", "HAT", "BED",
+  "COW", "FOX", "RUN", "LEG", "JAM", "KID", "YES", "VAN", "QUACK",
+];
+
+/* Approximate phonetic hints for the TTS fallback ("buh", "sss", ...).
+   These are deliberately rough; real recordings in sounds/ will replace them. */
+const PHONETIC = {
+  A:"ah", B:"buh", C:"kuh", D:"duh", E:"eh",  F:"fff", G:"guh",
+  H:"huh", I:"ih", J:"juh", K:"kuh", L:"lll", M:"mmm", N:"nnn",
+  O:"oh", P:"puh", Q:"kwuh", R:"rrr", S:"sss", T:"tuh", U:"uh",
+  V:"vvv", W:"wuh", X:"ks",  Y:"yuh", Z:"zzz",
+};
+
+/* Physical keyboard layout used to build the wireframe. */
+const KEY_ROWS = [
+  ["Q","W","E","R","T","Y","U","I","O","P"],
+  ["A","S","D","F","G","H","J","K","L"],
+  ["Z","X","C","V","B","N","M"],
+];
+
+/* Candy colours, cycled by slot index so each word is cheerfully multi-colour. */
+const CANDY = [
+  getComputedStyle(document.documentElement).getPropertyValue("--candy-1").trim(),
+  getComputedStyle(document.documentElement).getPropertyValue("--candy-2").trim(),
+  getComputedStyle(document.documentElement).getPropertyValue("--candy-3").trim(),
+  getComputedStyle(document.documentElement).getPropertyValue("--candy-4").trim(),
+  getComputedStyle(document.documentElement).getPropertyValue("--candy-5").trim(),
+  getComputedStyle(document.documentElement).getPropertyValue("--candy-6").trim(),
+];
+const candyFor = (i) => CANDY[i % CANDY.length];
+
+
+/* ---------------------------------------------------------------------
+   Derive which letters are "learned" (and therefore lit on the keyboard)
+   by the given level index. Persistence is computed from LEVELS, so it
+   can never drift out of sync with the word list.
+   --------------------------------------------------------------------- */
+function litLettersUpTo(levelIndex) {
+  const set = new Set();
+  for (let i = 0; i <= levelIndex; i++) {
+    for (const ch of LEVELS[i]) set.add(ch);
+  }
+  return set;
+}
+
+
+/* ---------------------------------------------------------------------
+   Audio  - plays a letter's sound.
+   Tries a recorded file first (sounds/x.mp3); if it is missing or fails,
+   automatically falls back to browser speech synthesis using the
+   phonetic hint. Sound must ALWAYS fire, so the key->sound bond never
+   feels dead - even over the balloon cap.
+   --------------------------------------------------------------------- */
+const Audio = (() => {
+  const cache = new Map();      // letter -> HTMLAudioElement | null (null = no file)
+  let unlocked = false;
+  let ctx = null;               // Web Audio context for synthesized effects
+
+  /** Called once on the first user tap to satisfy autoplay policies. */
+  function unlock() {
+    if (unlocked) return;
+    unlocked = true;
+    // Nudge speech synthesis awake with a silent utterance.
+    if (window.speechSynthesis) {
+      const u = new SpeechSynthesisUtterance(" ");
+      u.volume = 0;
+      window.speechSynthesis.speak(u);
+    }
+    // Create (and resume) the audio context for the squish effect.
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) {
+      ctx = new AC();
+      if (ctx.state === "suspended") ctx.resume();
+    }
+  }
+
+  /**
+   * A soft, synthesized "squish" for when a bubble lands in its gap.
+   * A quick downward pitch bloop through a lowpass filter reads as a
+   * gentle squelch - no audio files needed.
+   */
+  function squish() {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const lp = ctx.createBiquadFilter();
+
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(480, t);
+    osc.frequency.exponentialRampToValueAtTime(150, t + 0.16);
+
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(1400, t);
+    lp.frequency.exponentialRampToValueAtTime(500, t + 0.18);
+
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.22, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+
+    osc.connect(lp); lp.connect(gain); gain.connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.24);
+  }
+
+  function speak(letter) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(PHONETIC[letter] || letter);
+    u.rate = CONFIG.tts.rate;
+    u.pitch = CONFIG.tts.pitch;
+    window.speechSynthesis.speak(u);
+  }
+
+  function play(letter) {
+    // Try a recorded file the first time; remember the outcome.
+    if (!cache.has(letter)) {
+      const el = new window.Audio(CONFIG.soundsPath + letter.toLowerCase() + ".mp3");
+      el.addEventListener("error", () => cache.set(letter, null), { once: true });
+      cache.set(letter, el);
+    }
+    const el = cache.get(letter);
+    if (el) {
+      el.currentTime = 0;
+      el.play().catch(() => { cache.set(letter, null); speak(letter); });
+    } else {
+      speak(letter);   // no file available -> speak the phonetic hint
+    }
+  }
+
+  return { unlock, play, squish };
+})();
+
+
+/* ---------------------------------------------------------------------
+   LetterLayout  - the single source of truth for where each letter sits.
+   The gap (mask), the faint guide, and the filled letter all read their
+   position and size from here, so they line up perfectly by construction.
+   Coordinates are in the cloud SVG's own units.
+   --------------------------------------------------------------------- */
+const LetterLayout = (() => {
+  const LETTER_SIZE = 120;     // glyph font-size in SVG units
+  const LETTER_GAP  = 18;      // space between letters
+  const PAD_X       = 90;      // horizontal cloud padding around the word
+  const BASELINE_Y  = 150;     // vertical baseline of the letters
+
+  /** Returns { positions:[{x,y,size,letter}], width, height } for a word. */
+  function forWord(word) {
+    const stride = LETTER_SIZE * 0.72 + LETTER_GAP;   // advance per letter
+    const width  = PAD_X * 2 + stride * word.length;
+    const height = 320;
+    const positions = [];
+    for (let i = 0; i < word.length; i++) {
+      positions.push({
+        letter: word[i],
+        x: PAD_X + stride * i + stride / 2,
+        y: BASELINE_Y,
+        size: LETTER_SIZE,
+      });
+    }
+    return { positions, width, height };
+  }
+
+  return { forWord, SIZE: LETTER_SIZE };
+})();
+
+
+/* ---------------------------------------------------------------------
+   Cloud  - renders the current word as letter-shaped gaps in one cloud,
+   and fills a slot when a bubble arrives.
+   --------------------------------------------------------------------- */
+const Cloud = (() => {
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const svg = document.getElementById("cloud-svg");
+  let layout = null;   // current word's LetterLayout result
+
+  const el = (name, attrs = {}) => {
+    const node = document.createElementNS(SVGNS, name);
+    for (const k in attrs) node.setAttribute(k, attrs[k]);
+    return node;
+  };
+
+  /** Build a soft, blobby cloud path spanning the given box. */
+  function cloudShape(width, height) {
+    const g = el("g");
+    const cy = height * 0.5;
+    // A row of overlapping circles + a rounded body reads as a fluffy cloud.
+    const lumps = [
+      [width * 0.18, cy,        height * 0.34],
+      [width * 0.36, cy - 26,   height * 0.42],
+      [width * 0.55, cy - 34,   height * 0.46],
+      [width * 0.74, cy - 20,   height * 0.40],
+      [width * 0.86, cy,        height * 0.33],
+    ];
+    for (const [cx, ccy, r] of lumps) {
+      g.appendChild(el("circle", { cx, cy: ccy, r, fill: "var(--cloud)" }));
+    }
+    g.appendChild(el("rect", {
+      x: width * 0.10, y: cy - 6, width: width * 0.80, height: height * 0.42,
+      rx: height * 0.22, fill: "var(--cloud)",
+    }));
+    return g;
+  }
+
+  /** Render the word: cloud with letter holes, faint guides showing through. */
+  function setWord(word) {
+    layout = LetterLayout.forWord(word);
+    const { positions, width, height } = layout;
+
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const maskId = "cloud-holes";
+    const defs = el("defs");
+    const mask = el("mask", { id: maskId });
+    // White = keep cloud; black letters = punch holes.
+    mask.appendChild(el("rect", { x: 0, y: 0, width, height, fill: "white" }));
+    for (const p of positions) {
+      const t = el("text", {
+        x: p.x, y: p.y, "font-size": p.size, "font-family": "var(--font-display)",
+        "font-weight": 700, "text-anchor": "middle", "dominant-baseline": "middle",
+        fill: "black",
+      });
+      t.textContent = p.letter;
+      mask.appendChild(t);
+    }
+    defs.appendChild(mask);
+    svg.appendChild(defs);
+
+    // Faint guide letters sit BEHIND the cloud, dimly visible through holes.
+    const guides = el("g", { opacity: 0.5 });
+    for (const p of positions) {
+      const t = el("text", {
+        x: p.x, y: p.y, "font-size": p.size, "font-family": "var(--font-display)",
+        "font-weight": 700, "text-anchor": "middle", "dominant-baseline": "middle",
+        fill: "var(--cloud-guide)",
+      });
+      t.textContent = p.letter;
+      guides.appendChild(t);
+    }
+    svg.appendChild(guides);
+
+    // The cloud itself, with holes knocked out by the mask.
+    const cloud = cloudShape(width, height);
+    cloud.setAttribute("mask", `url(#${maskId})`);
+    cloud.setAttribute("filter", "drop-shadow(0 6px 6px rgba(80,110,140,0.18))");
+    svg.appendChild(cloud);
+
+    // A group that filled letters get appended into (drawn on top of the cloud).
+    svg.appendChild(el("g", { id: "filled-letters" }));
+  }
+
+  /** Fill slot `i` with its bright, solid letter (the balloon has arrived). */
+  function fill(i) {
+    const p = layout.positions[i];
+    const group = svg.querySelector("#filled-letters");
+    const t = el("text", {
+      x: p.x, y: p.y, "font-size": p.size, "font-family": "var(--font-display)",
+      "font-weight": 700, "text-anchor": "middle", "dominant-baseline": "middle",
+      fill: candyFor(i), class: "filled-letter",
+    });
+    t.textContent = p.letter;
+    group.appendChild(t);
+  }
+
+  /** Map a slot's SVG coordinate to a screen pixel position (for bubble aim). */
+  function slotScreenPos(i) {
+    const p = layout.positions[i];
+    const pt = svg.createSVGPoint();
+    pt.x = p.x; pt.y = p.y;
+    const screen = pt.matrixTransform(svg.getScreenCTM());
+    return { x: screen.x, y: screen.y };
+  }
+
+  /** Screen pixels per SVG unit, so a bubble can be sized to match its gap. */
+  function scale() {
+    const ctm = svg.getScreenCTM();
+    return ctm ? ctm.a : 1;
+  }
+
+  return { setWord, fill, slotScreenPos, scale };
+})();
+
+
+/* ---------------------------------------------------------------------
+   Keyboard  - the wireframe keyboard. Only "learned" letters are lit and
+   pressable; blank keys are inert. One key can be highlighted as target.
+   Physical keypresses and on-screen taps go through the same handler.
+   --------------------------------------------------------------------- */
+const Keyboard = (() => {
+  const root = document.getElementById("keyboard");
+  const keyEls = new Map();     // letter -> element
+  let onPress = () => {};       // set by Game
+
+  function build() {
+    for (const row of KEY_ROWS) {
+      const rowEl = document.createElement("div");
+      rowEl.className = "key-row";
+      for (const letter of row) {
+        const key = document.createElement("div");
+        key.className = "key";
+        key.dataset.letter = letter;
+        key.textContent = letter;
+        // Tap support for tablets: behave exactly like a physical press.
+        key.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          if (key.classList.contains("lit")) onPress(letter);
+        });
+        rowEl.appendChild(key);
+        keyEls.set(letter, key);
+      }
+      root.appendChild(rowEl);
+    }
+    // A decorative, inert space bar to complete the familiar keyboard shape.
+    const spaceRow = document.createElement("div");
+    spaceRow.className = "key-row";
+    const space = document.createElement("div");
+    space.className = "key space";
+    spaceRow.appendChild(space);
+    root.appendChild(spaceRow);
+  }
+
+  /** Light exactly the given set of letters; blank the rest. */
+  function setLit(letters) {
+    for (const [letter, key] of keyEls) {
+      key.classList.toggle("lit", letters.has(letter));
+    }
+  }
+
+  /** Glow one key as the current target (or clear with null). */
+  function setTarget(letter) {
+    for (const [l, key] of keyEls) key.classList.toggle("target", l === letter);
+  }
+
+  /** Screen position of a key's centre, for launching its balloon. */
+  function keyScreenPos(letter) {
+    const key = keyEls.get(letter);
+    const r = key.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  function setHandler(fn) { onPress = fn; }
+
+  return { build, setLit, setTarget, keyScreenPos, setHandler };
+})();
+
+
+/* ---------------------------------------------------------------------
+   Bubbles  - spawns letter-SHAPED bubbles and animates them. A correct
+   bubble rises to its target gap, squishes into place, and reports
+   arrival; stray bubbles drift up and off. A live cap keeps the chaos
+   joyful, never overwhelming.
+
+   A bubble is the letter's own glyph, drawn glossy and translucent, and
+   sized to the current cloud gap so it fits the hole exactly on landing.
+   --------------------------------------------------------------------- */
+const Balloons = (() => {
+  const stage = document.getElementById("stage");
+  const SVGNS = "http://www.w3.org/2000/svg";
+  let liveCount = 0;
+  let uid = 0;                  // unique id source for per-bubble gradients/clips
+
+  const reduceMotion =
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const svgEl = (name, attrs = {}) => {
+    const node = document.createElementNS(SVGNS, name);
+    for (const k in attrs) node.setAttribute(k, attrs[k]);
+    return node;
+  };
+
+  /**
+   * Build one letter-shaped bubble as a DOM element.
+   * The glyph is used three ways so the bubble reads as a glossy letter:
+   *   - a clip-path (so the glossy fill + highlight stay inside the letter)
+   *   - a translucent gradient body clipped to the glyph
+   *   - a white rim stroke drawn on top
+   * The wrapper is sized so the glyph renders at the same on-screen size as
+   * the cloud gap it will fill (Cloud.scale()), guaranteeing a snug fit.
+   */
+  function makeBubble(letter, tint) {
+    const id = ++uid;
+    const S = LetterLayout.SIZE;          // glyph font-size in SVG units
+    const VB_W = S * 1.5;                 // padded viewBox around the glyph
+    const VB_H = S * 1.7;
+    const cx = VB_W / 2;
+    const cy = VB_H / 2;
+    const pxPerUnit = Cloud.scale();      // match the gap's on-screen size
+
+    const wrap = document.createElement("div");
+    wrap.className = "bubble";
+    wrap.style.width = (VB_W * pxPerUnit) + "px";
+
+    const svg = svgEl("svg", { viewBox: `0 0 ${VB_W} ${VB_H}`, width: "100%" });
+
+    // Shared glyph attributes (identical to the cloud gap's glyph).
+    const glyphAttrs = {
+      x: cx, y: cy, "font-size": S, "font-family": "var(--font-display)",
+      "font-weight": 700, "text-anchor": "middle", "dominant-baseline": "middle",
+    };
+
+    const defs = svgEl("defs");
+
+    // Clip everything to the letter shape.
+    const clip = svgEl("clipPath", { id: `bubbleClip${id}` });
+    const clipText = svgEl("text", glyphAttrs);
+    clipText.textContent = letter;
+    clip.appendChild(clipText);
+    defs.appendChild(clip);
+
+    // Glossy top-to-bottom gradient body (translucent, like a bubble).
+    const grad = svgEl("linearGradient", {
+      id: `bubbleGrad${id}`, x1: "0", y1: "0", x2: "0", y2: "1",
+    });
+    grad.appendChild(svgEl("stop", { offset: "0",  "stop-color": "#FFFFFF", "stop-opacity": "0.85" }));
+    grad.appendChild(svgEl("stop", { offset: "0.45", "stop-color": tint,     "stop-opacity": "0.75" }));
+    grad.appendChild(svgEl("stop", { offset: "1",  "stop-color": tint,     "stop-opacity": "0.9"  }));
+    defs.appendChild(grad);
+    svg.appendChild(defs);
+
+    // Body + a soft highlight, both clipped to the glyph.
+    const clipped = svgEl("g", { "clip-path": `url(#bubbleClip${id})` });
+    clipped.appendChild(svgEl("rect", {
+      x: 0, y: 0, width: VB_W, height: VB_H, fill: `url(#bubbleGrad${id})`,
+    }));
+    clipped.appendChild(svgEl("ellipse", {
+      cx: cx - S * 0.18, cy: cy - S * 0.22, rx: S * 0.22, ry: S * 0.30,
+      fill: "rgba(255,255,255,0.55)",
+    }));
+    svg.appendChild(clipped);
+
+    // White rim stroke on top for a bubble edge.
+    const rim = svgEl("text", Object.assign({}, glyphAttrs, {
+      fill: "none", stroke: "rgba(255,255,255,0.85)", "stroke-width": S * 0.04,
+    }));
+    rim.textContent = letter;
+    svg.appendChild(rim);
+
+    wrap.appendChild(svg);
+    return wrap;
+  }
+
+  function place(wrap, x, y) {
+    // x,y are the desired CENTRE in screen px.
+    const w = wrap.offsetWidth  || window.innerHeight * 0.12;
+    const h = wrap.offsetHeight || w;
+    wrap.style.left = (x - w / 2) + "px";
+    wrap.style.top  = (y - h / 2) + "px";
+  }
+
+  function remove(wrap) {
+    if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+    liveCount = Math.max(0, liveCount - 1);
+  }
+
+  /**
+   * A correct-letter bubble: rise from the key to the target gap, squish
+   * into place, then call onArrive(). Returns true if a bubble was spawned
+   * (under cap). `tint` colours the bubble to match its finished letter.
+   */
+  function launchToTarget(letter, fromKey, toSlot, tint, onArrive) {
+    if (liveCount >= CONFIG.balloonCap) { onArrive(); return false; }
+    liveCount++;
+
+    const wrap = makeBubble(letter, tint);
+    stage.appendChild(wrap);
+    place(wrap, fromKey.x, fromKey.y);
+    const inner = wrap.querySelector("svg");
+
+    const dx = toSlot.x - fromKey.x;
+    const dy = toSlot.y - fromKey.y;
+
+    if (reduceMotion) {
+      place(wrap, toSlot.x, toSlot.y);
+      Audio.squish();
+      setTimeout(() => { onArrive(); remove(wrap); }, 120);
+      return true;
+    }
+
+    wrap.style.transition =
+      `transform ${CONFIG.balloonRiseMs}ms cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease`;
+    requestAnimationFrame(() => {
+      wrap.style.transform = `translate(${dx}px, ${dy}px)`;
+    });
+    setTimeout(() => {
+      // Landed: squish, play the squelch, then hand off to the solid letter.
+      Audio.squish();
+      inner.classList.add("squish");
+      setTimeout(() => {
+        onArrive();                       // Cloud.fill pops the solid letter in
+        wrap.style.opacity = "0";
+        setTimeout(() => remove(wrap), 250);
+      }, 180);
+    }, CONFIG.balloonRiseMs);
+    return true;
+  }
+
+  /** A stray bubble (any other key): drift up past the top, then vanish. */
+  function launchStray(letter, fromKey) {
+    if (liveCount >= CONFIG.balloonCap) return;
+    liveCount++;
+
+    const tints = [
+      getComputedStyle(document.documentElement).getPropertyValue("--candy-1").trim(),
+      getComputedStyle(document.documentElement).getPropertyValue("--candy-2").trim(),
+      getComputedStyle(document.documentElement).getPropertyValue("--candy-3").trim(),
+      getComputedStyle(document.documentElement).getPropertyValue("--candy-5").trim(),
+      getComputedStyle(document.documentElement).getPropertyValue("--candy-6").trim(),
+    ];
+    const tint = tints[Math.floor(Math.random() * tints.length)];
+    const wrap = makeBubble(letter, tint);
+    stage.appendChild(wrap);
+    place(wrap, fromKey.x, fromKey.y);
+
+    const drift = (Math.random() - 0.5) * window.innerWidth * 0.3;
+    const rise = -(fromKey.y + window.innerHeight * 0.2);
+
+    if (reduceMotion) { setTimeout(() => remove(wrap), 400); return; }
+
+    wrap.style.transition =
+      `transform ${CONFIG.strayRiseMs}ms linear, opacity 0.6s ease ${CONFIG.strayRiseMs - 600}ms`;
+    requestAnimationFrame(() => {
+      wrap.style.transform = `translate(${drift}px, ${rise}px) rotate(${drift * 0.05}deg)`;
+      wrap.style.opacity = "0";
+    });
+    setTimeout(() => remove(wrap), CONFIG.strayRiseMs);
+  }
+
+  return { launchToTarget, launchStray };
+})();
+
+
+/* ---------------------------------------------------------------------
+   Game  - the state machine. Owns the current level, the active slot,
+   and the flow from keypress to word completion to next level.
+   --------------------------------------------------------------------- */
+const Game = (() => {
+  const banner = document.getElementById("banner");
+
+  const state = {
+    levelIndex: 0,
+    word: "",
+    activeSlot: 0,
+    accepting: false,   // false during celebration / transitions
+  };
+
+  function startLevel(index) {
+    state.levelIndex = index;
+    state.word = LEVELS[index];
+    state.activeSlot = 0;
+    state.accepting = true;
+
+    Cloud.setWord(state.word);
+    Keyboard.setLit(litLettersUpTo(index));
+    Keyboard.setTarget(state.word[0]);
+  }
+
+  function advance() {
+    state.activeSlot++;
+    if (state.activeSlot >= state.word.length) {
+      completeWord();
+    } else {
+      Keyboard.setTarget(state.word[state.activeSlot]);
+    }
+  }
+
+  function completeWord() {
+    state.accepting = false;
+    Keyboard.setTarget(null);
+    showBanner(state.word);
+    if (window.speechSynthesis) {
+      setTimeout(() => {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(state.word);
+        u.rate = 0.85; u.pitch = 1.1;
+        window.speechSynthesis.speak(u);
+      }, 300);
+    }
+    setTimeout(() => {
+      hideBanner();
+      const next = (state.levelIndex + 1) % LEVELS.length;   // loop back at end
+      startLevel(next);
+    }, CONFIG.nextLevelDelayMs);
+  }
+
+  function showBanner(text) {
+    banner.textContent = text + "!";
+    banner.classList.add("show");
+  }
+  function hideBanner() { banner.classList.remove("show"); }
+
+  /** Central handler for every key/tap. Sound ALWAYS plays. */
+  function handlePress(letter) {
+    Audio.play(letter);
+
+    const isTarget =
+      state.accepting && letter === state.word[state.activeSlot];
+
+    if (isTarget) {
+      const slot = state.activeSlot;              // capture before it advances
+      const fromKey = Keyboard.keyScreenPos(letter);
+      const toSlot = Cloud.slotScreenPos(slot);
+      Keyboard.setTarget(null);                   // stop glow while it flies
+      Balloons.launchToTarget(letter, fromKey, toSlot, candyFor(slot), () => {
+        Cloud.fill(slot);
+        advance();
+      });
+    } else {
+      // Wrong or extra key: a balloon drifts by, but nothing lands.
+      const fromKey = Keyboard.keyScreenPos(letter);
+      Balloons.launchStray(letter, fromKey);
+    }
+  }
+
+  function init() {
+    Keyboard.build();
+    Keyboard.setHandler(handlePress);
+    window.addEventListener("keydown", (e) => {
+      const letter = e.key.toUpperCase();
+      if (letter >= "A" && letter <= "Z" && letter.length === 1) {
+        e.preventDefault();
+        handlePress(letter);
+      }
+    });
+  }
+
+  return { init, startLevel };
+})();
+
+
+/* ---------------------------------------------------------------------
+   Bootstrap  - wire up the "Tap to start" gate (unlocks audio), then go.
+   --------------------------------------------------------------------- */
+(function main() {
+  Game.init();
+  const gate = document.getElementById("start-gate");
+  document.getElementById("start-button").addEventListener("click", () => {
+    Audio.unlock();
+    gate.style.display = "none";
+    Game.startLevel(0);
+  });
+})();
+</script>
+</body>
+</html>
