@@ -249,8 +249,9 @@ right after the two most emotionally loaded words (MOM, DAD).
 
 ## 11. Implementation notes (for future agents)
 
-- **Single self-contained HTML file**, vanilla JS (no framework), so a parent
-  can open and edit it easily. SVG for the cloud/letters, DOM/CSS for balloons
+- **Single self-contained HTML file** (`index.html` — named so GitHub Pages
+  serves it as the site root), vanilla JS (no framework), so a parent can
+  open and edit it easily. SVG for the cloud/letters, DOM/CSS for balloons
   and keyboard, `Audio` + `speechSynthesis` for sound.
 - **Everything data-driven & tunable:**
   - `LEVELS` array = the whole curriculum (edit to change words/order).
