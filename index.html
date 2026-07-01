@@ -124,26 +124,18 @@
     100% { opacity: 1; transform: scale(1)   translateY(0);   }
   }
 
-  /* The ACTIVE gap: its guide letter brightens to the glow gold and pulses
-     in sync with the target key, and a soft halo glows over the cloud.
+  /* The ACTIVE gap: a pulsing gold OUTLINE traces the letter-shaped hole,
+     in sync with the target key. Outline only - the gap itself stays
+     empty-looking so it can't be mistaken for an already-found letter.
      Deliberate redundancy: the child matches glowing shape to glowing key. */
   .gap-guide { opacity: 0.5; }
-  .gap-guide.gap-active {
-    fill: var(--key-glow);
-    opacity: 1;
+  .gap-outline {
+    pointer-events: none;
     animation: gapPulse 1.1s ease-in-out infinite;
   }
   @keyframes gapPulse {
-    0%, 100% { opacity: 0.65; }
+    0%, 100% { opacity: 0.55; }
     50%      { opacity: 1; }
-  }
-  .gap-halo {
-    pointer-events: none;
-    animation: haloPulse 1.1s ease-in-out infinite;
-  }
-  @keyframes haloPulse {
-    0%, 100% { opacity: 0.3; }
-    50%      { opacity: 0.7; }
   }
 
   /* ===================================================================
@@ -400,7 +392,7 @@
     .key.target { animation: none; }
     .bubble { transition: none !important; }
     .bubble .wobble { animation: none; }
-    .gap-guide.gap-active, .gap-halo { animation: none; }
+    .gap-outline { animation: none; }
     #picture svg, #picture svg * { animation: none !important; }
   }
 </style>
@@ -749,9 +741,8 @@ const Cloud = (() => {
   const SVGNS = "http://www.w3.org/2000/svg";
   const svg = document.getElementById("cloud-svg");
   let layout = null;     // current word's LetterLayout result
-  let guideEls = [];     // guide <text> per slot (for the active highlight)
   let filledEls = [];    // filled <text> per slot (for re-landing pops)
-  let haloEl = null;     // soft glow over the active gap
+  let outlineEl = null;  // pulsing gold outline traced around the active gap
 
   const el = (name, attrs = {}) => {
     const node = document.createElementNS(SVGNS, name);
@@ -793,7 +784,6 @@ const Cloud = (() => {
   /** Render the word: cloud with letter holes, faint guides showing through. */
   function setWord(word) {
     layout = LetterLayout.forWord(word);
-    guideEls = [];
     filledEls = [];
     const { positions, width, height } = layout;
 
@@ -818,13 +808,6 @@ const Cloud = (() => {
       mask.appendChild(t);
     }
     defs.appendChild(mask);
-
-    // Soft radial gold for the active-gap halo.
-    const halo = el("radialGradient", { id: "halo-grad" });
-    halo.appendChild(el("stop", { offset: "0",   "stop-color": "#FFD166", "stop-opacity": "0.9" }));
-    halo.appendChild(el("stop", { offset: "0.7", "stop-color": "#FFD166", "stop-opacity": "0.35" }));
-    halo.appendChild(el("stop", { offset: "1",   "stop-color": "#FFD166", "stop-opacity": "0" }));
-    defs.appendChild(halo);
     svg.appendChild(defs);
 
     // Faint guide letters sit BEHIND the cloud, dimly visible through holes.
@@ -835,7 +818,6 @@ const Cloud = (() => {
       }));
       t.textContent = p.letter;
       guides.appendChild(t);
-      guideEls.push(t);
     }
     svg.appendChild(guides);
 
@@ -845,12 +827,23 @@ const Cloud = (() => {
     cloud.setAttribute("filter", "drop-shadow(0 6px 6px rgba(80,110,140,0.18))");
     svg.appendChild(cloud);
 
-    // The active-gap halo glows ON TOP of the cloud, around the hole.
-    haloEl = el("circle", {
-      class: "gap-halo", fill: "url(#halo-grad)", r: 0,
-    });
-    haloEl.style.display = "none";
-    svg.appendChild(haloEl);
+    // The active-gap outline traces the hole's letter shape ON TOP of the
+    // cloud: a soft wide glow stroke under a crisp one. Outline only, so
+    // the gap still reads as empty (a filled look would suggest the letter
+    // was already found). Repositioned per slot by setActive().
+    outlineEl = el("g", { class: "gap-outline" });
+    const glowStroke = el("text", Object.assign(glyphAttrs(positions[0]), {
+      fill: "none", stroke: "var(--key-glow)", "stroke-width": 13,
+      opacity: 0.35, "stroke-linejoin": "round",
+    }));
+    const crispStroke = el("text", Object.assign(glyphAttrs(positions[0]), {
+      fill: "none", stroke: "var(--key-glow)", "stroke-width": 5,
+      "stroke-linejoin": "round",
+    }));
+    outlineEl.appendChild(glowStroke);
+    outlineEl.appendChild(crispStroke);
+    outlineEl.style.display = "none";
+    svg.appendChild(outlineEl);
 
     // A group that filled letters get appended into (drawn on top of the cloud).
     svg.appendChild(el("g", { id: "filled-letters" }));
@@ -858,17 +851,18 @@ const Cloud = (() => {
 
   /** Highlight slot `i` as the one being typed (null clears the highlight). */
   function setActive(i) {
-    for (const g of guideEls) g.classList.remove("gap-active");
+    if (!outlineEl) return;
     if (i == null || !layout) {
-      if (haloEl) haloEl.style.display = "none";
+      outlineEl.style.display = "none";
       return;
     }
     const p = layout.positions[i];
-    guideEls[i].classList.add("gap-active");
-    haloEl.setAttribute("cx", p.x);
-    haloEl.setAttribute("cy", p.y);
-    haloEl.setAttribute("r", p.size * 0.72);
-    haloEl.style.display = "";
+    for (const stroke of outlineEl.children) {
+      stroke.setAttribute("x", p.x);
+      stroke.setAttribute("y", p.y);
+      stroke.textContent = p.letter;
+    }
+    outlineEl.style.display = "";
   }
 
   /** Fill slot `i` with its bright, solid letter (the balloon has arrived). */

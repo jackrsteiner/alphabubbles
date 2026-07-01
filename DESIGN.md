@@ -37,11 +37,13 @@ is the source of truth for *implementation*.
    Each gap faintly shows its target letter as a guide. A **picture of the
    word** (hand-drawn SVG) stands on the grass below, hinting at what is
    being spelled.
-2. The **active slot** (next letter to fill) glows — its guide letter
-   brightens to the glow gold and pulses, with a soft halo over the gap —
-   and the **matching key** on the wireframe keyboard glows in sync. Both
-   the goal gap *and* the glowing key are shown — deliberate redundancy
-   that helps a young child match on-screen shape to key position.
+2. The **active slot** (next letter to fill) glows — a pulsing gold
+   **outline traces the letter-shaped hole** (outline only: the gap itself
+   stays empty-looking, so it can't be mistaken for a letter that was
+   already found) — and the **matching key** on the wireframe keyboard
+   glows in sync. Both the goal gap *and* the glowing key are shown —
+   deliberate redundancy that helps a young child match on-screen shape
+   to key position.
 3. Child finds and presses the glowing key. A **letter-shaped bubble** (the
    letter's own glyph, drawn glossy and translucent) rises from the key and
    **nests into its matching gap, squishing into place and becoming a solid
