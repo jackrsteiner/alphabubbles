@@ -125,11 +125,13 @@ is the source of truth for *implementation*.
 
 - **Phonetic sounds, not letter names** (A = "ah", not "ay") — better for
   reading readiness.
-- **Sourcing strategy:** recorded clips are the eventual *primary* source
-  (ideally a parent's voice — meaningful and phonetically correct, since
-  browsers can't reliably synthesize clean phonemes). **Browser TTS is an
-  automatic per-letter fallback** so the game is fully playable *now* with no
-  assets and never blocks on recording.
+- **Sourcing strategy:** recorded clips are the *primary* source
+  (a parent's voice — meaningful and phonetically correct, since browsers
+  can't reliably synthesize clean phonemes). **`sounds/` now contains all
+  26 letters in the parent's voice**, cut from a one-take A–Z recording
+  (silence-split, normalized to −3 dBFS, faded, 96 kbps mono mp3).
+  **Browser TTS remains the automatic per-letter fallback** (and still
+  speaks the whole word at completion, which has no recorded clip).
 - **Drop-in contract:** the game looks for `sounds/a.mp3 … sounds/z.mp3`.
   Missing/failed files fall back to TTS per-letter, so a half-filled folder
   works. No code changes needed to upgrade the audio.
@@ -275,7 +277,10 @@ right after the two most emotionally loaded words (MOM, DAD).
 
 ## 12. Open / future ideas (not yet built)
 
-- Real recorded phoneme audio (parent's voice) dropped into `sounds/`.
+- ~~Real recorded phoneme audio (parent's voice) dropped into `sounds/`.~~
+  Done — all 26 letters recorded and split into `sounds/`.
+- Record the whole curriculum *words* too (`sounds/word-mom.mp3`-style
+  contract) so completion speech also uses the parent's voice.
 - Multi-word phrases (one cloud per word).
 - Optional zero-new-letter reinforcement levels.
 - Animal sounds on completion (the pictures exist now — a "moo" clip could
