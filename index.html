@@ -1056,30 +1056,59 @@ const Pictures = (() => {
       <circle cx="${cx}" cy="${cy}" r="5" fill="#9FB2CB"/></g>`;
 
   const ART = {
+    /* MOM, DAD and INDI are drawn from the family photo: mom's blonde
+       shoulder-length hair, blue eyes and charcoal tee; dad's curl cloud,
+       full beard and light-blue glasses; Indi's swept light-brown fringe
+       and orange shirt. Same rig as everyone else (eye/wink, mouth swap). */
     MOM: `${shadow}
-      <circle cx="100" cy="76" r="42" fill="#8A5A33"/>
-      <ellipse cx="61" cy="104" rx="11" ry="30" fill="#8A5A33"/>
-      <ellipse cx="139" cy="104" rx="11" ry="30" fill="#8A5A33"/>
-      <path d="M62 190 Q100 104 138 190 Z" fill="#FF8FC0"/>
+      <circle cx="100" cy="76" r="42" fill="#C9A15A"/>
+      <ellipse cx="64" cy="98" rx="14" ry="38" fill="#C9A15A"/>
+      <ellipse cx="136" cy="98" rx="14" ry="38" fill="#C9A15A"/>
+      <path d="M62 190 Q62 132 100 132 Q138 132 138 190 Z" fill="#4A5568"/>
       <circle cx="100" cy="84" r="33" fill="${SKIN}"/>
-      <path d="M67 76 Q100 42 133 76 Q100 60 67 76 Z" fill="#8A5A33"/>
-      ${eyes(88, 112, 82)} ${cheeks(82, 118, 94)} ${mouth(100, 96, 9)}`,
+      <path d="M67 78 Q74 44 110 45 Q130 48 133 76 Q120 56 92 61 Q74 65 67 78 Z"
+        fill="#C9A15A"/>
+      <circle class="eye" cx="88" cy="83" r="5" fill="#4A76B8"/>
+      <circle class="eye wink" cx="112" cy="83" r="5" fill="#4A76B8"/>
+      ${cheeks(82, 118, 94)} ${mouth(100, 96, 9)}`,
 
     DAD: `${shadow}
-      <path d="M60 190 Q60 130 100 130 Q140 130 140 190 Z" fill="#5BB8F0"/>
-      <circle cx="100" cy="84" r="33" fill="${SKIN}"/>
-      <path d="M67 80 Q67 48 100 48 Q133 48 133 80 Q100 64 67 80 Z" fill="#4A3624"/>
-      ${eyes(88, 112, 84)} ${cheeks(82, 118, 96)} ${mouth(100, 98, 9)}`,
+      <path d="M60 190 Q60 130 100 130 Q140 130 140 190 Z" fill="#C9CFD8"/>
+      <circle cx="70" cy="62" r="14" fill="#3A3230"/>
+      <circle cx="86" cy="46" r="15" fill="#3A3230"/>
+      <circle cx="106" cy="40" r="15" fill="#3A3230"/>
+      <circle cx="126" cy="48" r="14" fill="#3A3230"/>
+      <circle cx="138" cy="66" r="13" fill="#3A3230"/>
+      <circle cx="58" cy="82" r="11" fill="#3A3230"/>
+      <circle cx="144" cy="86" r="11" fill="#3A3230"/>
+      <circle cx="95" cy="38" r="8" fill="#6B6560" opacity="0.8"/>
+      <circle cx="133" cy="56" r="6" fill="#6B6560" opacity="0.8"/>
+      <circle cx="100" cy="86" r="32" fill="#D9A46F"/>
+      <rect x="64" y="72" width="10" height="26" fill="#3A3230"/>
+      <rect x="126" y="72" width="10" height="26" fill="#3A3230"/>
+      <ellipse cx="100" cy="118" rx="36" ry="27" fill="#3A3230"/>
+      <path d="M84 102 Q100 95 116 102 Q100 107 84 102 Z" fill="#2E2724"/>
+      <circle class="eye" cx="87" cy="77" r="5" fill="${INK}"/>
+      <circle class="eye wink" cx="113" cy="77" r="5" fill="${INK}"/>
+      <rect x="74" y="66" width="24" height="21" rx="6" fill="none"
+        stroke="#BFE3EE" stroke-width="3.5"/>
+      <rect x="102" y="66" width="24" height="21" rx="6" fill="none"
+        stroke="#BFE3EE" stroke-width="3.5"/>
+      <path class="on-idle" d="M91 110 Q100 118 109 110" fill="none"
+        stroke="#EAD9C6" stroke-width="4" stroke-linecap="round"/>
+      <path class="on-cheer" d="M86 107 Q100 128 114 107 Z" fill="#FFF7EA"
+        stroke="#8A3A3A" stroke-width="2.5" stroke-linejoin="round"/>`,
 
     INDI: `${shadow}
-      <path d="M66 190 Q66 138 100 138 Q134 138 134 190 Z" fill="#6FCF86"/>
+      <path d="M66 190 Q66 138 100 138 Q134 138 134 190 Z" fill="#F2A65A"/>
+      <ellipse cx="100" cy="141" rx="14" ry="6" fill="#FFF7EA"/>
+      <circle cx="100" cy="86" r="31" fill="#A0764A"/>
       <circle cx="100" cy="96" r="28" fill="${SKIN}"/>
-      <circle cx="78" cy="76" r="11" fill="#3E2E20"/>
-      <circle cx="100" cy="68" r="12" fill="#3E2E20"/>
-      <circle cx="122" cy="76" r="11" fill="#3E2E20"/>
-      <circle cx="68" cy="90" r="8" fill="#3E2E20"/>
-      <circle cx="132" cy="90" r="8" fill="#3E2E20"/>
-      ${eyes(90, 110, 94, 4.5)} ${cheeks(84, 116, 104)} ${mouth(100, 106, 8)}`,
+      <path d="M73 92 Q70 60 100 58 Q130 60 127 90 Q124 68 96 71 Q80 74 73 92 Z"
+        fill="#A0764A"/>
+      <circle class="eye" cx="90" cy="94" r="4.5" fill="#55759E"/>
+      <circle class="eye wink" cx="110" cy="94" r="4.5" fill="#55759E"/>
+      ${cheeks(84, 116, 104)} ${mouth(100, 106, 8)}`,
 
     CAT: `${shadow}
       <path class="waggle" d="M140 156 Q172 148 166 116" stroke="#F2A65A"
