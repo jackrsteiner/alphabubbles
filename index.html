@@ -417,6 +417,21 @@
   #start-button:active { transform: translateY(0.4vh); box-shadow: 0 0.4vh 0 var(--cloud-shadow); }
   #start-button:focus-visible { outline: 0.5vmin solid var(--candy-4); outline-offset: 0.5vmin; }
 
+  /* Version badge: tiny, unobtrusive, always visible (even over the start
+     gate) so a glance at any device tells you which build is running. */
+  #version {
+    position: absolute;
+    right: 0.8vh;
+    bottom: 0.4vh;
+    z-index: 21;                     /* above #start-gate (20) */
+    font-size: clamp(9px, 1.5vmin, 13px);
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    color: var(--ink);
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
   /* Respect users who prefer less motion: keep the game, calm the drift.
      Expression swaps (the big smile) still happen - they are opacity
      toggles, not animations. */
@@ -444,6 +459,8 @@
       <h1>Alphabubbles</h1>
       <button id="start-button" type="button">Tap to start</button>
     </div>
+
+    <div id="version"></div>
   </div>
 
 <script>
@@ -472,6 +489,14 @@
      Game          - the state machine that ties it together
    ===================================================================== */
 
+
+/* ---------------------------------------------------------------------
+   VERSION  - single source of truth, shown in the corner badge.
+   Semantic versioning (semver.org): bump MINOR for new features/content,
+   PATCH for fixes and tweaks. Every merged change bumps this and adds a
+   CHANGELOG.md entry - see CLAUDE.md for the policy.
+   --------------------------------------------------------------------- */
+const VERSION = "0.7.0";
 
 /* ---------------------------------------------------------------------
    CONFIG  - tune the feel of the game here.
@@ -1747,6 +1772,7 @@ const Game = (() => {
    Bootstrap  - wire up the "Tap to start" gate (unlocks audio), then go.
    --------------------------------------------------------------------- */
 (function main() {
+  document.getElementById("version").textContent = "v" + VERSION;
   Game.init();
   const gate = document.getElementById("start-gate");
   document.getElementById("start-button").addEventListener("click", () => {
