@@ -141,6 +141,8 @@
   /* ===================================================================
      WORD PICTURE  (hand-drawn SVG character standing on the grass)
      Shown while the word is being spelled; comes alive on completion.
+     All the celebration moves key off the shared .char class, so the
+     crowd of previously-learned friends (see #friends) reuses them.
      =================================================================== */
   #picture {
     position: absolute;
@@ -150,14 +152,14 @@
     z-index: 2;
     pointer-events: none;
   }
-  #picture svg {
+  .char svg {
     display: block;
     width: 100%;
     height: auto;
     animation: picIdle 3.2s ease-in-out infinite;   /* gentle idle bob */
     transform-origin: 50% 100%;
   }
-  #picture.celebrate svg {
+  .char.celebrate svg {
     animation: picCheer 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) 3;
   }
   @keyframes picIdle {
@@ -172,13 +174,13 @@
 
   /* Expression swap: parts marked .on-idle show before completion, parts
      marked .on-cheer (the big smile, opened eyes...) appear on celebrate. */
-  #picture .on-cheer { opacity: 0; }
-  #picture.celebrate .on-cheer { opacity: 1; }
-  #picture.celebrate .on-idle  { opacity: 0; }
+  .char .on-cheer { opacity: 0; }
+  .char.celebrate .on-cheer { opacity: 1; }
+  .char.celebrate .on-idle  { opacity: 0; }
 
   /* Per-part success moves. Every part uses transform-box: fill-box so it
      animates around its own anchor, not the whole SVG's origin. */
-  #picture.celebrate .wink {
+  .char.celebrate .wink {
     animation: wink 1.2s ease-in-out 0.15s 2;
     transform-box: fill-box; transform-origin: center;
   }
@@ -186,7 +188,7 @@
     0%, 55%, 100% { transform: scaleY(1); }
     20%, 40%      { transform: scaleY(0.12); }
   }
-  #picture.celebrate .waggle {
+  .char.celebrate .waggle {
     animation: waggle 0.4s ease-in-out 6 alternate;
     transform-box: fill-box; transform-origin: left bottom;
   }
@@ -194,12 +196,12 @@
     from { transform: rotate(-8deg); }
     to   { transform: rotate(10deg); }
   }
-  #picture.celebrate .spin {
+  .char.celebrate .spin {
     animation: spinAround 1.4s ease-in-out 1;
     transform-box: fill-box; transform-origin: center;
   }
   @keyframes spinAround { to { transform: rotate(360deg); } }
-  #picture.celebrate .tip {
+  .char.celebrate .tip {
     animation: hatTip 0.8s ease-in-out 2;
     transform-box: fill-box; transform-origin: center bottom;
   }
@@ -207,7 +209,7 @@
     0%, 100% { transform: rotate(0) translateY(0); }
     40%      { transform: rotate(-14deg) translateY(-10px); }
   }
-  #picture.celebrate .nod {
+  .char.celebrate .nod {
     animation: nod 0.7s ease-in-out 2;
     transform-box: fill-box; transform-origin: center bottom;
   }
@@ -216,12 +218,12 @@
     30%      { transform: rotate(9deg); }
     70%      { transform: rotate(-9deg); }
   }
-  #picture.celebrate .beak-top {
+  .char.celebrate .beak-top {
     animation: quackTop 0.3s ease-in-out 6 alternate;
     transform-box: fill-box; transform-origin: left center;
   }
   @keyframes quackTop { to { transform: rotate(-22deg); } }
-  #picture.celebrate .kick {
+  .char.celebrate .kick {
     animation: kick 0.6s ease-in-out 2;
     transform-box: fill-box; transform-origin: top center;
   }
@@ -230,18 +232,48 @@
     30%      { transform: rotate(-24deg); }
     60%      { transform: rotate(10deg); }
   }
-  #picture.celebrate .leg-a,
-  #picture.celebrate .arm-b {
+  .char.celebrate .leg-a,
+  .char.celebrate .arm-b {
     animation: kickA 0.3s ease-in-out 6 alternate;
     transform-box: fill-box; transform-origin: top center;
   }
-  #picture.celebrate .leg-b,
-  #picture.celebrate .arm-a {
+  .char.celebrate .leg-b,
+  .char.celebrate .arm-a {
     animation: kickB 0.3s ease-in-out 6 alternate;
     transform-box: fill-box; transform-origin: top center;
   }
   @keyframes kickA { from { transform: rotate(-14deg); } to { transform: rotate(16deg); } }
   @keyframes kickB { from { transform: rotate(16deg); } to { transform: rotate(-14deg); } }
+
+  /* ===================================================================
+     FRIENDS  (the cumulative celebration crowd)
+     When a word is completed, every previously-learned word's character
+     pops up on the grass and celebrates too - so the party grows with
+     each word until the whole cast is cheering together.
+     =================================================================== */
+  #friends {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .friend {
+    position: absolute;
+    bottom: calc(var(--keyboard-height) + 1.5vh);
+    /* Each friend pops in with a springy bounce; JS staggers --pop-delay
+       so the crowd arrives as a happy ripple, not a wall. */
+    animation: friendPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation-delay: var(--pop-delay, 0ms);
+    transform-origin: 50% 100%;
+  }
+  @keyframes friendPop {
+    0%   { opacity: 0; transform: scale(0) translateY(30%); }
+    70%  { opacity: 1; transform: scale(1.12) translateY(-4%); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  /* The cheer bounce waits for its own pop-in, so each friend starts
+     celebrating the moment it lands on the grass. */
+  .friend.celebrate svg { animation-delay: var(--pop-delay, 0ms); }
 
   /* ===================================================================
      BUBBLES  (letter-SHAPED bubbles that rise from the keyboard)
@@ -393,7 +425,8 @@
     .bubble { transition: none !important; }
     .bubble .wobble { animation: none; }
     .gap-outline { animation: none; }
-    #picture svg, #picture svg * { animation: none !important; }
+    .char svg, .char svg * { animation: none !important; }
+    .friend { animation: none; }   /* friendPop skipped; friends just appear */
   }
 </style>
 </head>
@@ -403,7 +436,8 @@
     <div id="cloud-layer"><svg id="cloud-svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
     <div id="banner"></div>
     <div id="meadow"></div>
-    <div id="picture"></div>
+    <div id="picture" class="char"></div>
+    <div id="friends"></div>
     <div id="keyboard"></div>
 
     <div id="start-gate">
@@ -1004,6 +1038,8 @@ const Keyboard = (() => {
    below the cloud. While the word is being spelled it idles with a gentle
    bob; on completion it celebrates: a happy bounce, the small smile swaps
    for a big one, an eye winks, tails wag, the duck quacks, wheels spin...
+   And every previously-learned character pops back up to join the party,
+   so the celebration crowd grows with each word.
 
    Drawings are simple template strings (viewBox 0 0 200 200, ground at
    y~190). Class names drive the CSS success animations:
@@ -1298,9 +1334,16 @@ const Pictures = (() => {
       <path d="M148 92 q18 6 24 4 q-12 9 -24 3 Z" fill="#DE7238"/>`,
   };
 
-  /** Show the picture for a word (hidden if a future word has no art yet). */
+  const friendsEl = document.getElementById("friends");
+
+  const svgFor = (word) =>
+    `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">${ART[word]}</svg>`;
+
+  /** Show the picture for a word (hidden if a future word has no art yet).
+      Also clears the celebration crowd from the previous word. */
   function show(word) {
     rootEl.classList.remove("celebrate");
+    friendsEl.innerHTML = "";
     const art = ART[word];
     if (!art) {
       rootEl.style.display = "none";
@@ -1308,12 +1351,48 @@ const Pictures = (() => {
       return;
     }
     rootEl.style.display = "";
-    rootEl.innerHTML =
-      `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">${art}</svg>`;
+    rootEl.innerHTML = svgFor(word);
   }
 
-  /** The success reward: smile, wink, wag, quack, spin... */
-  function celebrate() { rootEl.classList.add("celebrate"); }
+  /**
+   * The cumulative crowd: every previously-learned word's character pops
+   * up along the grass and celebrates with the current one. They spread
+   * across the space right of the main picture and shrink as the cast
+   * grows, so by QUACK the whole meadow is a party.
+   */
+  function showFriends(words) {
+    friendsEl.innerHTML = "";
+    const cast = words.filter((w) => ART[w]);
+    if (!cast.length) return;
+
+    const picRect = rootEl.getBoundingClientRect();
+    const startX = picRect.width ? picRect.right + window.innerWidth * 0.01
+                                 : window.innerWidth * 0.04;
+    const endX = window.innerWidth * 0.97;
+    const slot = (endX - startX) / cast.length;
+    // Friends may overlap a little (slot * 1.2): it reads as a crowd.
+    const width = Math.max(46, Math.min(picRect.width * 0.85 || 160, slot * 1.2));
+
+    cast.forEach((word, i) => {
+      const friend = document.createElement("div");
+      friend.className = "char friend celebrate";
+      friend.style.width = width + "px";
+      friend.style.left = (startX + slot * i + (slot - width) / 2) + "px";
+      // Alternate a small lift so the crowd bunches like a group photo.
+      friend.style.bottom =
+        `calc(var(--keyboard-height) + ${(1.5 + (i % 2) * 1.6).toFixed(1)}vh)`;
+      friend.style.setProperty("--pop-delay", (120 + i * 90) + "ms");
+      friend.innerHTML = svgFor(word);
+      friendsEl.appendChild(friend);
+    });
+  }
+
+  /** The success reward: smile, wink, wag, quack, spin... and every
+      character learned so far joins in (`friends` = previous words). */
+  function celebrate(friends = []) {
+    rootEl.classList.add("celebrate");
+    showFriends(friends);
+  }
 
   return { show, celebrate };
 })();
@@ -1560,16 +1639,19 @@ const Game = (() => {
 
   /**
    * The big reward, concentrated at word completion:
-   * banner + the picture comes alive + a success jingle, then the word is
-   * sounded out slowly letter by letter ("Mmm" "oh" "mmm") and finally
-   * spoken whole ("Mom!"). The next level waits for all of it.
+   * banner + the picture comes alive (joined by every character learned
+   * so far) + a success jingle, then the word is sounded out slowly letter
+   * by letter ("Mmm" "oh" "mmm") and finally spoken whole ("Mom!").
+   * The next level waits for all of it.
    */
   function completeWord() {
     state.accepting = false;
     Keyboard.setTarget(null);
     Cloud.setActive(null);
     showBanner(state.word);
-    Pictures.celebrate();
+    // The whole cast so far celebrates together: MOM alone, then DAD+MOM,
+    // then INDI+DAD+MOM... the party grows with every word learned.
+    Pictures.celebrate(LEVELS.slice(0, state.levelIndex));
     Audio.jingle();
 
     const letters = [...state.word];
