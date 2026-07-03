@@ -197,6 +197,13 @@ is the source of truth for *implementation*.
   its own thing — the cat/dog/fox/pig wag tails, the duck **quacks** its
   beak, the sun spins its rays, bus/van wheels spin, the runner's legs
   pump, the hat tips, the sleeper in the bed wakes up and smiles.
+- **The celebration is cumulative:** when a word is completed, every
+  previously-learned word's character pops up along the grass and
+  celebrates too. MOM celebrates alone; DAD brings Mom; INDI brings Dad
+  and Mom... by QUACK the whole cast lines the meadow, cheering together.
+  Friends spread across the space right of the main picture and shrink as
+  the crowd grows; they pop in as a staggered ripple and vanish when the
+  next word starts.
 - All 19 curriculum words have art. A future word without art simply shows
   no picture (nothing breaks), and `prefers-reduced-motion` keeps the
   expression swap but stills the motion.
