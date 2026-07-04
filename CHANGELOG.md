@@ -11,6 +11,17 @@ bottom-right corner of the screen.
 
 Versions before 0.7.0 were assigned retroactively from the git history.
 
+## [0.8.0] - 2026-07-04
+
+### Added
+- Character warp: on an untouched level (before any key press), tapping
+  the word's picture shows the whole cast standing on cards over the
+  dimmed game; tapping any character jumps straight to that word's level
+  and normal progression continues from there. Each card shows the word
+  under its figure. Tapping the backdrop, pressing Escape, or pressing
+  any lit key closes the screen; the first key press of a level locks
+  the warp until the next word.
+
 ## [0.7.0] - 2026-07-03
 
 ### Added

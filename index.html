@@ -152,6 +152,9 @@
     z-index: 2;
     pointer-events: none;
   }
+  /* While the level is untouched (no key pressed yet) the picture is a
+     tappable door to the warp screen. First key press locks it. */
+  #picture.warpable { pointer-events: auto; cursor: pointer; }
   .char svg {
     display: block;
     width: 100%;
@@ -274,6 +277,56 @@
   /* The cheer bounce waits for its own pop-in, so each friend starts
      celebrating the moment it lands on the grass. */
   .friend.celebrate svg { animation-delay: var(--pop-delay, 0ms); }
+
+  /* ===================================================================
+     WARP  (tap the word's picture before typing starts -> the whole
+     cast lines up; tap any character to jump to that word's level)
+     =================================================================== */
+  #warp {
+    position: absolute;
+    inset: 0;
+    z-index: 10;                       /* over the game, under #start-gate */
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(55, 72, 95, 0.35);   /* dim the game behind */
+  }
+  #warp.open { display: flex; }
+
+  #warp-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 2vmin 2vmin;
+    max-width: 94vw;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+
+  /* Each character stands on its own soft white card - a big, obvious
+     tap target that pops over the dimmed game. Figures stand still here
+     (it's a menu, not a celebration). */
+  .warp-item {
+    width: clamp(64px, 12.5vmin, 130px);
+    padding: 1.2vmin 1vmin 0.8vmin;
+    border-radius: 2vmin;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 0.6vh 0 var(--cloud-shadow);
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+  .warp-item:active { transform: translateY(0.4vh) scale(0.95); }
+  .warp-item .char svg { animation: none; }
+
+  .warp-word {
+    margin-top: 0.4vmin;
+    font-size: clamp(10px, 2vmin, 18px);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+  }
 
   /* ===================================================================
      BUBBLES  (letter-SHAPED bubbles that rise from the keyboard)
@@ -455,6 +508,8 @@
     <div id="friends"></div>
     <div id="keyboard"></div>
 
+    <div id="warp"><div id="warp-grid"></div></div>
+
     <div id="start-gate">
       <h1>Alphabubbles</h1>
       <button id="start-button" type="button">Tap to start</button>
@@ -485,6 +540,7 @@
      Cloud         - builds the word cloud + fills letters + active-gap glow
      Keyboard      - full wireframe, lit letters, target glow, tap support
      Pictures      - hand-drawn SVG per word; animates as the success reward
+     Warp          - tap the picture on an untouched level to jump to any word
      Balloons      - spawning, the live cap, rise + drift animation
      Game          - the state machine that ties it together
    ===================================================================== */
@@ -496,7 +552,7 @@
    PATCH for fixes and tweaks. Every merged change bumps this and adds a
    CHANGELOG.md entry - see CLAUDE.md for the policy.
    --------------------------------------------------------------------- */
-const VERSION = "0.7.0";
+const VERSION = "0.8.0";
 
 /* ---------------------------------------------------------------------
    CONFIG  - tune the feel of the game here.
@@ -1419,7 +1475,57 @@ const Pictures = (() => {
     showFriends(friends);
   }
 
-  return { show, celebrate };
+  /** A word's art as standalone SVG markup (null if no art exists). */
+  function artFor(word) {
+    return ART[word] ? svgFor(word) : null;
+  }
+
+  return { show, celebrate, artFor };
+})();
+
+
+/* ---------------------------------------------------------------------
+   Warp  - tap the word's picture BEFORE any key has been pressed and the
+   whole cast lines up on cards over the dimmed game; tap any character
+   to jump straight to that word's level (progression then continues
+   normally from there). Tapping the backdrop closes the screen and the
+   level resumes unchanged. Figures stand still: a menu, not a party.
+   --------------------------------------------------------------------- */
+const Warp = (() => {
+  const root = document.getElementById("warp");
+  const grid = document.getElementById("warp-grid");
+  let onPick = () => {};       // set by Game
+
+  // A tap anywhere that isn't a character card: close, change nothing.
+  root.addEventListener("pointerdown", (e) => {
+    if (e.target === root || e.target === grid) close();
+  });
+
+  function open() {
+    grid.innerHTML = "";
+    LEVELS.forEach((word, index) => {
+      const art = Pictures.artFor(word);
+      if (!art) return;                 // a future word without art is skipped
+      const item = document.createElement("div");
+      item.className = "warp-item";
+      item.innerHTML =
+        `<div class="char">${art}</div><div class="warp-word">${word}</div>`;
+      item.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        close();
+        onPick(index);
+      });
+      grid.appendChild(item);
+    });
+    root.classList.add("open");
+  }
+
+  function close() { root.classList.remove("open"); }
+  function isOpen() { return root.classList.contains("open"); }
+  function setHandler(fn) { onPick = fn; }
+
+  return { open, close, isOpen, setHandler };
 })();
 
 
@@ -1629,6 +1735,7 @@ const Balloons = (() => {
    --------------------------------------------------------------------- */
 const Game = (() => {
   const banner = document.getElementById("banner");
+  const pictureEl = document.getElementById("picture");
 
   const state = {
     levelIndex: 0,
@@ -1636,6 +1743,7 @@ const Game = (() => {
     activeSlot: 0,
     accepting: false,   // false during celebration / transitions
     inFlight: false,    // a correct bubble is mid-rise (guards double-fills)
+    levelStarted: false, // true after the first lit-key press; locks the warp
   };
 
   function startLevel(index) {
@@ -1644,6 +1752,8 @@ const Game = (() => {
     state.activeSlot = 0;
     state.accepting = true;
     state.inFlight = false;
+    state.levelStarted = false;
+    pictureEl.classList.add("warpable");
 
     Cloud.setWord(state.word);
     Cloud.setActive(0);
@@ -1704,6 +1814,16 @@ const Game = (() => {
   /** Central handler for every key/tap. Sound always plays for lit keys. */
   function handlePress(letter) {
     if (!Keyboard.isLit(letter)) return;   // unlearned keys are inert
+
+    // Any lit-key press locks the warp for this level; a press while the
+    // warp screen is open simply closes it and plays through - the
+    // key->sound bond always wins.
+    Warp.close();
+    if (!state.levelStarted) {
+      state.levelStarted = true;
+      pictureEl.classList.remove("warpable");
+    }
+
     Audio.play(letter);
 
     const current = state.word[state.activeSlot];
@@ -1745,7 +1865,21 @@ const Game = (() => {
   function init() {
     Keyboard.build();
     Keyboard.setHandler(handlePress);
+
+    // The warp: tapping the word's picture on an untouched level shows the
+    // whole cast; picking a character jumps straight to that word's level.
+    pictureEl.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      if (state.accepting && !state.levelStarted) Warp.open();
+    });
+    Warp.setHandler((index) => startLevel(index));
+
     window.addEventListener("keydown", (e) => {
+      // Escape backs out of the warp screen (a parent convenience).
+      if (e.key === "Escape") {
+        Warp.close();
+        return;
+      }
       // Modifier keys themselves get a decorative nudge...
       if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") {
         Keyboard.flash(e.key);
