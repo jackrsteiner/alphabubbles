@@ -18,7 +18,7 @@ Versions before 0.7.0 were assigned retroactively from the git history.
   key never lit even though the design promised full alphabet coverage.
   Added ZOO (with a friendly elephant, trunk-waggle celebration) as the
   new finale, level 20 — the game now ends on the alphabet's last letter,
-  right after the QUACK duck-noise party.
+  right after the QUACK duck-noise party. (#19)
 
 ## [0.8.0] - 2026-07-04
 
