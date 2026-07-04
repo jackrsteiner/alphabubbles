@@ -552,7 +552,7 @@
    PATCH for fixes and tweaks. Every merged change bumps this and adds a
    CHANGELOG.md entry - see CLAUDE.md for the policy.
    --------------------------------------------------------------------- */
-const VERSION = "0.8.0";
+const VERSION = "0.8.1";
 
 /* ---------------------------------------------------------------------
    CONFIG  - tune the feel of the game here.
@@ -580,7 +580,7 @@ const CONFIG = {
    --------------------------------------------------------------------- */
 const LEVELS = [
   "MOM", "DAD", "INDI", "CAT", "DOG", "PIG", "SUN", "BUS", "HAT", "BED",
-  "COW", "FOX", "RUN", "LEG", "JAM", "KID", "YES", "VAN", "QUACK",
+  "COW", "FOX", "RUN", "LEG", "JAM", "KID", "YES", "VAN", "ZOO", "QUACK",
 ];
 
 /* Approximate phonetic hints for the TTS fallback ("buh", "sss", ...).
@@ -1401,6 +1401,21 @@ const Pictures = (() => {
       ${mouth(148, 156, 6)}
       <circle cx="162" cy="140" r="5" fill="#FFF3C2"/>
       ${wheel(68, 176)} ${wheel(136, 176)}`,
+
+    ZOO: `${shadow}
+      <ellipse cx="100" cy="152" rx="46" ry="34" fill="#9FB2CB"/>
+      <circle cx="58" cy="78" r="21" fill="#8CA2BE"/>
+      <circle cx="142" cy="78" r="21" fill="#8CA2BE"/>
+      <circle cx="53" cy="78" r="11" fill="#F0B7C8"/>
+      <circle cx="147" cy="78" r="11" fill="#F0B7C8"/>
+      <circle cx="100" cy="84" r="34" fill="#9FB2CB"/>
+      ${eyes(86, 114, 76)}
+      ${cheeks(78, 122, 88)}
+      <path d="M84 98 q-5 9 2 15" stroke="#FFF7EA" stroke-width="5"
+        fill="none" stroke-linecap="round"/>
+      ${mouth(88, 103, 5)}
+      <path class="waggle" d="M100 94 Q102 116 118 120 Q132 122 134 108"
+        stroke="#8CA2BE" stroke-width="13" fill="none" stroke-linecap="round"/>`,
 
     QUACK: `${shadow}
       <path d="M76 184 l-12 7 h24 Z" fill="#F2884B"/>

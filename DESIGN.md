@@ -204,14 +204,14 @@ is the source of truth for *implementation*.
   Friends spread across the space right of the main picture and shrink as
   the crowd grows; they pop in as a staggered ripple and vanish when the
   next word starts.
-- All 19 curriculum words have art. A future word without art simply shows
+- All 20 curriculum words have art. A future word without art simply shows
   no picture (nothing breaks), and `prefers-reduced-motion` keeps the
   expression swap but stills the motion.
 
 ## 7c. The warp (character level-select)
 
 - **Tapping the word's picture opens the warp screen** — the whole cast
-  (all 19 characters, learned or not) lines up on soft white cards over
+  (all 20 characters, learned or not) lines up on soft white cards over
   the dimmed game, each with its word printed underneath (the child is a
   pre-reader; the label is bonus print exposure, the picture is the real
   affordance). Tapping a character jumps **straight to that word's
@@ -251,15 +251,18 @@ right after the two most emotionally loaded words (MOM, DAD).
 6. PIG    (+P)              16. KID    (+K)
 7. SUN    (+S, +U)          17. YES    (+Y)
 8. BUS    (+B)              18. VAN    (+V)
-9. HAT    (+H)              19. QUACK  (+Q)  ← finale, a duck noise
-10. BED   (+E)
+9. HAT    (+H)              19. ZOO    (+Z)
+10. BED   (+E)              20. QUACK  (+Q)  ← finale, a duck noise
 ```
 
 - All 26 letters covered; never more than 2 new at once.
 - **INDI** (nickname for Indigo): adds only I, N (D already lit from DAD); the
   repeated I gives a bonus rep on a brand-new letter.
+- **ZOO** (level 19) exists to close the alphabet: it was added after
+  discovering no other word taught Z. It adds only Z (O is lit from MOM)
+  and its elephant keeps the animal theme going into the finale.
 - **QUACK** finale: chosen over QUIZ because it's a *sound the child can make*
-  (concrete, playful, tied to a duck). By level 19 it adds only Q.
+  (concrete, playful, tied to a duck). By level 20 it adds only Q.
 - Optional idea: **zero-new-letter "reinforcement" levels** (TOP, CUP, DOT,
   MOO) can be dropped in anywhere as confidence breathers.
 - Variable word length + repeated letters (INDI, QUACK) must be supported by
