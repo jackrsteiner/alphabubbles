@@ -11,6 +11,15 @@ bottom-right corner of the screen.
 
 Versions before 0.7.0 were assigned retroactively from the git history.
 
+## [0.8.1] - 2026-07-04
+
+### Fixed
+- The letter Z was never taught: no curriculum word contained it, so its
+  key never lit even though the design promised full alphabet coverage.
+  Added ZOO (with a friendly elephant, trunk-waggle celebration) as the
+  new finale, level 20 — the game now ends on the alphabet's last letter,
+  right after the QUACK duck-noise party. (#19)
+
 ## [0.8.0] - 2026-07-04
 
 ### Added
@@ -20,7 +29,7 @@ Versions before 0.7.0 were assigned retroactively from the git history.
   and normal progression continues from there. Each card shows the word
   under its figure. Tapping the backdrop, pressing Escape, or pressing
   any lit key closes the screen; the first key press of a level locks
-  the warp until the next word.
+  the warp until the next word. (#18)
 
 ## [0.7.0] - 2026-07-03
 

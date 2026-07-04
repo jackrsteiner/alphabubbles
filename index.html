@@ -552,7 +552,7 @@
    PATCH for fixes and tweaks. Every merged change bumps this and adds a
    CHANGELOG.md entry - see CLAUDE.md for the policy.
    --------------------------------------------------------------------- */
-const VERSION = "0.8.0";
+const VERSION = "0.8.1";
 
 /* ---------------------------------------------------------------------
    CONFIG  - tune the feel of the game here.
@@ -576,11 +576,12 @@ const CONFIG = {
 /* ---------------------------------------------------------------------
    LEVELS  - the curriculum. Edit / reorder freely.
    Each level adds at most one or two new letters and reuses old ones.
-   "INDI" is the child's name; the finale "QUACK" ends on a duck noise.
+   "INDI" is the child's name; "ZOO" closes the alphabet with its last
+   letter, right after the QUACK duck-noise party.
    --------------------------------------------------------------------- */
 const LEVELS = [
   "MOM", "DAD", "INDI", "CAT", "DOG", "PIG", "SUN", "BUS", "HAT", "BED",
-  "COW", "FOX", "RUN", "LEG", "JAM", "KID", "YES", "VAN", "QUACK",
+  "COW", "FOX", "RUN", "LEG", "JAM", "KID", "YES", "VAN", "QUACK", "ZOO",
 ];
 
 /* Approximate phonetic hints for the TTS fallback ("buh", "sss", ...).
@@ -1413,6 +1414,21 @@ const Pictures = (() => {
       <circle cx="134" cy="80" r="4.5" fill="${INK}" class="eye"/>
       <path class="beak-top" d="M148 82 q24 -2 28 8 q-18 8 -28 4 Z" fill="#F2884B"/>
       <path d="M148 92 q18 6 24 4 q-12 9 -24 3 Z" fill="#DE7238"/>`,
+
+    ZOO: `${shadow}
+      <ellipse cx="100" cy="152" rx="46" ry="34" fill="#9FB2CB"/>
+      <circle cx="58" cy="78" r="21" fill="#8CA2BE"/>
+      <circle cx="142" cy="78" r="21" fill="#8CA2BE"/>
+      <circle cx="53" cy="78" r="11" fill="#F0B7C8"/>
+      <circle cx="147" cy="78" r="11" fill="#F0B7C8"/>
+      <circle cx="100" cy="84" r="34" fill="#9FB2CB"/>
+      ${eyes(86, 114, 76)}
+      ${cheeks(78, 122, 88)}
+      <path d="M84 98 q-5 9 2 15" stroke="#FFF7EA" stroke-width="5"
+        fill="none" stroke-linecap="round"/>
+      ${mouth(88, 103, 5)}
+      <path class="waggle" d="M100 94 Q102 116 118 120 Q132 122 134 108"
+        stroke="#8CA2BE" stroke-width="13" fill="none" stroke-linecap="round"/>`,
   };
 
   const friendsEl = document.getElementById("friends");

@@ -200,18 +200,18 @@ is the source of truth for *implementation*.
 - **The celebration is cumulative:** when a word is completed, every
   previously-learned word's character pops up along the grass and
   celebrates too. MOM celebrates alone; DAD brings Mom; INDI brings Dad
-  and Mom... by QUACK the whole cast lines the meadow, cheering together.
+  and Mom... by ZOO the whole cast lines the meadow, cheering together.
   Friends spread across the space right of the main picture and shrink as
   the crowd grows; they pop in as a staggered ripple and vanish when the
   next word starts.
-- All 19 curriculum words have art. A future word without art simply shows
+- All 20 curriculum words have art. A future word without art simply shows
   no picture (nothing breaks), and `prefers-reduced-motion` keeps the
   expression swap but stills the motion.
 
 ## 7c. The warp (character level-select)
 
 - **Tapping the word's picture opens the warp screen** — the whole cast
-  (all 19 characters, learned or not) lines up on soft white cards over
+  (all 20 characters, learned or not) lines up on soft white cards over
   the dimmed game, each with its word printed underneath (the child is a
   pre-reader; the label is bonus print exposure, the picture is the real
   affordance). Tapping a character jumps **straight to that word's
@@ -229,7 +229,7 @@ is the source of truth for *implementation*.
   wins.
 - **Lit keys derive from the destination level** (the existing
   `litLettersUpTo` rule): warping back to MOM shows only M+O lit;
-  warping ahead to QUACK lights everything. No separate progress state
+  warping ahead to ZOO lights everything. No separate progress state
   is kept, so warping fully *becomes* that level — including the
   celebration crowd size.
 - **The figures stand still on the warp screen** (idle expressions, no
@@ -251,15 +251,18 @@ right after the two most emotionally loaded words (MOM, DAD).
 6. PIG    (+P)              16. KID    (+K)
 7. SUN    (+S, +U)          17. YES    (+Y)
 8. BUS    (+B)              18. VAN    (+V)
-9. HAT    (+H)              19. QUACK  (+Q)  ← finale, a duck noise
-10. BED   (+E)
+9. HAT    (+H)              19. QUACK  (+Q)  ← a duck noise
+10. BED   (+E)              20. ZOO    (+Z)  ← finale, closes the alphabet
 ```
 
 - All 26 letters covered; never more than 2 new at once.
 - **INDI** (nickname for Indigo): adds only I, N (D already lit from DAD); the
   repeated I gives a bonus rep on a brand-new letter.
-- **QUACK** finale: chosen over QUIZ because it's a *sound the child can make*
-  (concrete, playful, tied to a duck). By level 19 it adds only Q.
+- **QUACK** (level 19): chosen over QUIZ because it's a *sound the child can
+  make* (concrete, playful, tied to a duck). By level 19 it adds only Q.
+- **ZOO** finale (level 20): added after discovering no other word taught Z,
+  so the game literally ends on the alphabet's last letter. It adds only Z
+  (O is lit from MOM) and its elephant joins the full-cast party.
 - Optional idea: **zero-new-letter "reinforcement" levels** (TOP, CUP, DOT,
   MOO) can be dropped in anywhere as confidence breathers.
 - Variable word length + repeated letters (INDI, QUACK) must be supported by
