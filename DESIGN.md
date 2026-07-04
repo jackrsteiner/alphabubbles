@@ -208,6 +208,33 @@ is the source of truth for *implementation*.
   no picture (nothing breaks), and `prefers-reduced-motion` keeps the
   expression swap but stills the motion.
 
+## 7c. The warp (character level-select)
+
+- **Tapping the word's picture opens the warp screen** — the whole cast
+  (all 19 characters, learned or not) lines up on soft white cards over
+  the dimmed game, each with its word printed underneath (the child is a
+  pre-reader; the label is bonus print exposure, the picture is the real
+  affordance). Tapping a character jumps **straight to that word's
+  level**, and normal progression continues from there (warp to CAT →
+  DOG is next).
+- **Only on an untouched level:** the warp opens only before the first
+  key press of a level. Any lit-key press — correct or stray — locks it
+  until the next word. This keeps the warp from ever interrupting
+  mid-word flow and makes accidental opens unlikely (the natural first
+  act on a new level is pressing the glowing key, not tapping the
+  picture).
+- **Backing out is free:** tapping the backdrop (or Escape) closes the
+  screen and the level resumes unchanged. A key press while the warp is
+  open closes it and plays through normally — the key→sound bond always
+  wins.
+- **Lit keys derive from the destination level** (the existing
+  `litLettersUpTo` rule): warping back to MOM shows only M+O lit;
+  warping ahead to QUACK lights everything. No separate progress state
+  is kept, so warping fully *becomes* that level — including the
+  celebration crowd size.
+- **The figures stand still on the warp screen** (idle expressions, no
+  bob, no celebration) — it's a menu, not a party.
+
 ## 8. Curriculum (level order)
 
 Design rule: **each level adds at most 1–2 new letters and reuses old ones.**
