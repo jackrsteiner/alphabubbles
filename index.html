@@ -576,11 +576,12 @@ const CONFIG = {
 /* ---------------------------------------------------------------------
    LEVELS  - the curriculum. Edit / reorder freely.
    Each level adds at most one or two new letters and reuses old ones.
-   "INDI" is the child's name; the finale "QUACK" ends on a duck noise.
+   "INDI" is the child's name; "ZOO" closes the alphabet with its last
+   letter, right after the QUACK duck-noise party.
    --------------------------------------------------------------------- */
 const LEVELS = [
   "MOM", "DAD", "INDI", "CAT", "DOG", "PIG", "SUN", "BUS", "HAT", "BED",
-  "COW", "FOX", "RUN", "LEG", "JAM", "KID", "YES", "VAN", "ZOO", "QUACK",
+  "COW", "FOX", "RUN", "LEG", "JAM", "KID", "YES", "VAN", "QUACK", "ZOO",
 ];
 
 /* Approximate phonetic hints for the TTS fallback ("buh", "sss", ...).
@@ -1402,6 +1403,18 @@ const Pictures = (() => {
       <circle cx="162" cy="140" r="5" fill="#FFF3C2"/>
       ${wheel(68, 176)} ${wheel(136, 176)}`,
 
+    QUACK: `${shadow}
+      <path d="M76 184 l-12 7 h24 Z" fill="#F2884B"/>
+      <path d="M104 184 l-12 7 h24 Z" fill="#F2884B"/>
+      <path d="M52 140 L34 124 L56 126 Z" fill="#F2C94C"/>
+      <ellipse cx="92" cy="150" rx="46" ry="35" fill="#FFD166"/>
+      <ellipse class="waggle" cx="78" cy="152" rx="22" ry="14" fill="#F2C94C"
+        transform="rotate(-14 78 152)"/>
+      <circle cx="126" cy="88" r="26" fill="#FFD166"/>
+      <circle cx="134" cy="80" r="4.5" fill="${INK}" class="eye"/>
+      <path class="beak-top" d="M148 82 q24 -2 28 8 q-18 8 -28 4 Z" fill="#F2884B"/>
+      <path d="M148 92 q18 6 24 4 q-12 9 -24 3 Z" fill="#DE7238"/>`,
+
     ZOO: `${shadow}
       <ellipse cx="100" cy="152" rx="46" ry="34" fill="#9FB2CB"/>
       <circle cx="58" cy="78" r="21" fill="#8CA2BE"/>
@@ -1416,18 +1429,6 @@ const Pictures = (() => {
       ${mouth(88, 103, 5)}
       <path class="waggle" d="M100 94 Q102 116 118 120 Q132 122 134 108"
         stroke="#8CA2BE" stroke-width="13" fill="none" stroke-linecap="round"/>`,
-
-    QUACK: `${shadow}
-      <path d="M76 184 l-12 7 h24 Z" fill="#F2884B"/>
-      <path d="M104 184 l-12 7 h24 Z" fill="#F2884B"/>
-      <path d="M52 140 L34 124 L56 126 Z" fill="#F2C94C"/>
-      <ellipse cx="92" cy="150" rx="46" ry="35" fill="#FFD166"/>
-      <ellipse class="waggle" cx="78" cy="152" rx="22" ry="14" fill="#F2C94C"
-        transform="rotate(-14 78 152)"/>
-      <circle cx="126" cy="88" r="26" fill="#FFD166"/>
-      <circle cx="134" cy="80" r="4.5" fill="${INK}" class="eye"/>
-      <path class="beak-top" d="M148 82 q24 -2 28 8 q-18 8 -28 4 Z" fill="#F2884B"/>
-      <path d="M148 92 q18 6 24 4 q-12 9 -24 3 Z" fill="#DE7238"/>`,
   };
 
   const friendsEl = document.getElementById("friends");

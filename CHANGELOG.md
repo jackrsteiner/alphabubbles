@@ -16,8 +16,9 @@ Versions before 0.7.0 were assigned retroactively from the git history.
 ### Fixed
 - The letter Z was never taught: no curriculum word contained it, so its
   key never lit even though the design promised full alphabet coverage.
-  Added ZOO (with a friendly elephant, trunk-waggle celebration) as level
-  19 — it adds only Z, and QUACK stays the finale.
+  Added ZOO (with a friendly elephant, trunk-waggle celebration) as the
+  new finale, level 20 — the game now ends on the alphabet's last letter,
+  right after the QUACK duck-noise party.
 
 ## [0.8.0] - 2026-07-04
 
